@@ -2,7 +2,7 @@
 
 #include "ultra-shared/UI/GUI_CRTSettings.h"
 
-#include "Config/DataSource.h"
+#include "ultra-shared/Config/DataSource.h"
 #include "Config/FilePaths.h"
 #include "ultra-shared/Helpers/ComponentUtils.h"
 #include "ultra-shared/UI/Components/GUI_ComboBox.h"

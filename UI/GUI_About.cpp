@@ -2,7 +2,7 @@
 
 #include "ultra-shared/UI/GUI_About.h"
 
-#include "Config/DataSource.h"
+#include "ultra-shared/Config/DataSource.h"
 #include "Helpers/MessageRouter.h"
 #include "ultra-shared/UI/UI_Helpers.h"
 
