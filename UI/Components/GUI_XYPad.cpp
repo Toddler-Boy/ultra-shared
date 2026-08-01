@@ -127,10 +127,17 @@ void GUI_XYPad::timerCallback ()
 {
 	stopTimer ();
 
+	// Store first: onValueChange consumers read the preferences
+	preferences->set ( sectionId + "/" + compId, value );
+
 	if ( onValueChange )
 		onValueChange ();
+}
+//-----------------------------------------------------------------------------
 
-	// Store settings
-	preferences->set ( sectionId + "/" + compId, value );
+void GUI_XYPad::restorePreference ()
+{
+	value = preferences->get<std::pair<int,int>> ( sectionId + "/" + compId );
+	repaint ();
 }
 //-----------------------------------------------------------------------------

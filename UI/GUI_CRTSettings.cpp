@@ -253,6 +253,8 @@ void GUI_CRTSettings::connectComponents ()
 	{
 		if ( onSettingsChanged )
 			onSettingsChanged ();
+
+		updatePresetDisplay ();
 	};
 
 	auto overlayChanged = [ this ]
@@ -480,6 +482,47 @@ void GUI_CRTSettings::connectComponents ()
 	}
 
 	//
+	// CRT preset selector (items from refreshCRTPickLists, the id indexes
+	// presetMarkedNames; one past the end = the developer save action)
+	//
+	{
+		auto	presetBrowser = componentutils::findComponent<juce::ComboBox> ( "crt/disabler/preset", settingsComponentMap );
+
+		presetBrowser->onChange = [ this, settingsChanged, overlayChanged, presetBrowser ]
+		{
+			const auto	id = presetBrowser->getSelectedId ();
+			if ( id <= 0 )
+				return;
+
+			// Developer save: dump the live values as a new user preset file
+			// (rename it on disk for a real name) and select it
+			if ( id > presetMarkedNames.size () )
+			{
+				const auto	file = filepaths::getUserCRTPresetsPath ().getChildFile ( "Preset.yml" ).getNonexistentSibling ();
+				const auto	saved = crtpresets::saveCurrentValues ( *preferences, file.getFileNameWithoutExtension () );
+
+				if ( saved.isNotEmpty () )
+					preferences->set ( "crt/preset", saved );
+
+				refreshCRTPickLists ();
+				return;
+			}
+
+			const auto&	marked = presetMarkedNames[ id - 1 ];
+
+			preferences->set ( "crt/preset", marked );
+			currentPreset.load ( marked );
+			currentPreset.applyTo ( *preferences );
+
+			restorePresetScopeWidgets ();
+			refreshCRTPickLists ();	// re-selects the mask pattern from the preference
+
+			settingsChanged ();
+			overlayChanged ();	// the preset may have swapped the mask bitmap
+		};
+	}
+
+	//
 	// CRT-Mask-bitmap selector (same marked-name scheme as the overlays)
 	//
 	{
@@ -668,5 +711,92 @@ void GUI_CRTSettings::refreshCRTPickLists ()
 
 	build ( "overlay/disabler/bitmap", overlayMarkedNames, factoryOverlayNames (), userOverlayNames (), "overlay/bitmap" );
 	build ( "crt/disabler/mask-bitmap", maskMarkedNames, factoryMaskNames (), userMaskNames (), "crt/mask-bitmap" );
+
+	//
+	// CRT presets: the same factory/user menu scheme; re-parse the stored
+	// preset too, its file may be what just changed
+	//
+	{
+		auto	box = componentutils::findComponent<juce::ComboBox> ( "crt/disabler/preset", settingsComponentMap );
+
+		box->clear ( juce::dontSendNotification );
+		presetMarkedNames = crtpresets::listPresets ();
+
+		auto&	menu = *box->getRootMenu ();
+		auto	factorySeen = false;
+
+		for ( const auto& marked : presetMarkedNames )
+		{
+			const auto	isUser = marked.startsWith ( userMarker );
+
+			if ( isUser && factorySeen )
+			{
+				menu.addSeparator ();
+				factorySeen = false;
+			}
+			else if ( ! isUser )
+			{
+				factorySeen = true;
+			}
+
+			juce::PopupMenu::Item	item ( marked.fromFirstOccurrenceOf ( "/", false, false ) );
+			item.itemID = presetMarkedNames.indexOf ( marked ) + 1;
+			item.setImage ( UI::getMenuIcon ( icons->get ( isUser ? "crt-user" : "crt-factory" ) ) );
+			menu.addItem ( item );
+		}
+
+		if ( filepaths::isDeveloperMode () )
+		{
+			menu.addSeparator ();
+
+			juce::PopupMenu::Item	item ( strings->get ( "crt/settings/crt/preset-save" ) );
+			item.itemID = presetMarkedNames.size () + 1;
+			menu.addItem ( item );
+		}
+
+		currentPreset.load ( preferences->get<juce::String> ( "crt/preset" ) );
+		updatePresetDisplay ();
+	}
+}
+//-----------------------------------------------------------------------------
+
+void GUI_CRTSettings::restorePresetScopeWidgets ()
+{
+	static const char* const	sliders[] =
+	{
+		"noise", "sharpening", "luma-blur", "chroma-blur", "crosstalk", "hannover", "rainbowing", "drift",
+		"curve", "bleed", "convergence", "h-wave", "expansion",
+		"scanlines", "mask", "phosphor", "vignette", "adjacent", "halation", "ambient", "reflection"
+	};
+
+	for ( const auto* name : sliders )
+		componentutils::findComponent<GUI_CRTSliderLabel> ( juce::String ( "crt/disabler/" ) + name, settingsComponentMap )->restorePreference ();
+
+	static const char* const	pads[] = { "bleed-red", "bleed-green", "bleed-blue" };
+
+	for ( const auto* name : pads )
+		componentutils::findComponent<GUI_XYPad> ( juce::String ( "crt/disabler/" ) + name, settingsComponentMap )->restorePreference ();
+}
+//-----------------------------------------------------------------------------
+
+void GUI_CRTSettings::updatePresetDisplay ()
+{
+	if ( settingsComponentMap.empty () )
+		return;
+
+	auto	box = componentutils::findComponent<juce::ComboBox> ( "crt/disabler/preset", settingsComponentMap );
+
+	const auto	index = presetMarkedNames.indexOf ( currentPreset.markedName () );
+
+	if ( index >= 0 && currentPreset.matches ( *preferences ) )
+	{
+		if ( box->getSelectedId () != index + 1 )
+			box->setSelectedId ( index + 1, juce::dontSendNotification );
+
+		return;
+	}
+
+	if ( const auto& custom = strings->get ( "crt/settings/crt/preset-custom" ); box->getText () != custom )
+		box->setText ( custom, juce::dontSendNotification );
 }
 //-----------------------------------------------------------------------------

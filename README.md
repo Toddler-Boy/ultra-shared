@@ -12,8 +12,8 @@ app-provided headers at fixed paths. Each app must supply:
 | Header | Required interface |
 | --- | --- |
 | `Config/DataSource.h` | `namespace datasource`: `isPak`, `exists`, `loadText`, `loadData`, `loadImage`, `listFiles`, `listFolders`, `getDevFile`, `setActiveUserOverlay`, `setActiveUserCRTMask` |
-| `Config/FilePaths.h` | `namespace filepaths`: `root` enum (`data`/`user`), `markerFor`, `isDeveloperMode`, `getUserOverlaysPath`, `getUserCRTMasksPath` |
-| `Config/Preferences.h` | `class Preferences : YamlFile` with the app's defaults table (must define every key the shared components read) |
+| `Config/FilePaths.h` | `namespace filepaths`: `root` enum (`data`/`user`), `markerFor`, `isDeveloperMode`, `getUserOverlaysPath`, `getUserCRTMasksPath`, `getUserCRTPresetsPath` |
+| `Config/Preferences.h` | `class Preferences : YamlFile` with the app's defaults table (must define every key the shared components read, including `crt/preset`) |
 | `Helpers/Messages.h` | `msg::SettingChanged` broadcast (theme selector) |
 | `Helpers/ImageUtils.h` | `imageutils::hintFromFilename` (VIC2 screenshot hints) |
 | `UI/GUI_LookAndFeel.h` | LookAndFeel class with `fontPoints ( points, weight )` and `monoFontPoints ( points, weight )` |

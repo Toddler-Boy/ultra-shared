@@ -18,6 +18,9 @@ public:
 	// juce::Component
 	void resized () override;
 
+	// this: re-reads the preference into the slider (preset apply)
+	void restorePreference ();
+
 	std::function<void()>	onValueChange;
 
 private:

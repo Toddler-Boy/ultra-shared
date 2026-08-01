@@ -31,6 +31,12 @@ GUI_CRTSliderLabel::GUI_CRTSliderLabel ( const juce::String& setSection, const j
 }
 //-----------------------------------------------------------------------------
 
+void GUI_CRTSliderLabel::restorePreference ()
+{
+	slider.setValue ( double ( preferences->get<int> ( settingSection + "/" + settingName ) ), juce::dontSendNotification );
+}
+//-----------------------------------------------------------------------------
+
 void GUI_CRTSliderLabel::resized ()
 {
 	UI::setLayout ( layout, {	"UI/layouts/constants.json",

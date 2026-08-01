@@ -3,7 +3,9 @@
 #include <JuceHeader.h>
 
 #include "Config/Preferences.h"
+#include "ultra-shared/Config/CRTPresets.h"
 #include "ultra-shared/Resources/Icons.h"
+#include "ultra-shared/Resources/Strings.h"
 #include "ultra-shared/Video/VIC2_Render.h"
 
 //-----------------------------------------------------------------------------
@@ -57,8 +59,14 @@ private:
 	void connectComponents ();
 	void updateDisablers ();
 
+	// Preset support: push applied values into the live widgets, show the
+	// matching preset name or "Custom" in the drop-down
+	void restorePresetScopeWidgets ();
+	void updatePresetDisplay ();
+
 	juce::SharedResourcePointer<Preferences>	preferences;
 	juce::SharedResourcePointer<Icons>			icons;
+	juce::SharedResourcePointer<Strings>		strings;
 
 	juce::Viewport	settingsViewport { "viewport" };
 	juce::Component	settingsContent { "content" };
@@ -69,6 +77,11 @@ private:
 	// overlay and mask pick lists, the form the preferences store
 	juce::StringArray	overlayMarkedNames;
 	juce::StringArray	maskMarkedNames;
+
+	// The stored crt/preset, parsed; live values are compared against it to
+	// decide between its name and "Custom" in the drop-down
+	juce::StringArray	presetMarkedNames;
+	CRTPreset			currentPreset;
 
 	gin::LayoutSupport	settingsLayout;
 

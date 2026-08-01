@@ -23,6 +23,9 @@ public:
 	// juce::Timer
 	void timerCallback () override;
 
+	// this: re-reads the preference into the pad (preset apply)
+	void restorePreference ();
+
 	std::function<void ()>	onValueChange;
 
 private:
