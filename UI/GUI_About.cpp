@@ -75,6 +75,10 @@ void GUI_About::updateColors ()
 
 void GUI_About::loadContent ()
 {
-	scrollTextViewer.setText ( datasource::loadText ( "UI/about.txt" ) );
+	// "{}" in the text becomes the compiled-in JUCE version, so the notice
+	// never goes stale
+	const auto	juceVersion = juce::String ( JUCE_MAJOR_VERSION ) + "." + juce::String ( JUCE_MINOR_VERSION ) + "." + juce::String ( JUCE_BUILDNUMBER );
+
+	scrollTextViewer.setText ( datasource::loadText ( "UI/about.txt" ).replace ( "{}", juceVersion ) );
 }
 //-----------------------------------------------------------------------------
