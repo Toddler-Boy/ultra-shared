@@ -8,6 +8,13 @@
 
 //-----------------------------------------------------------------------------
 
+static void broadcastClose ()
+{
+	if ( auto* broadcaster = UI::ab.load () )
+		broadcaster->sendActionMessage ( "closeAbout" );
+}
+//-----------------------------------------------------------------------------
+
 GUI_About::GUI_About ()
 	: juce::Component ( "about" )
 {
@@ -30,15 +37,16 @@ GUI_About::GUI_About ()
 		icon.mipMap.setImage ( png.getData (), png.getSize () );
 	}
 
-	about.addAndMakeVisible ( icon );
-	about.addAndMakeVisible ( title );
-	about.addAndMakeVisible ( copyright );
-	about.addAndMakeVisible ( link );
-	addAndMakeVisible ( about );
+	addAndMakeVisible ( body );
+
+	body.addAndMakeVisible ( icon );
+	body.addAndMakeVisible ( title );
+	body.addAndMakeVisible ( copyright );
+	body.addAndMakeVisible ( link );
 
 	scrollTextViewer.setName ( "scrollText" );
-	scrollTextViewer.setFont ( UI::monoFont ( 16.0f, 400 ) );
-	addAndMakeVisible ( scrollTextViewer );
+	scrollTextViewer.setFont ( UI::monoFont ( 12.0f, 400 ) );
+	body.addAndMakeVisible ( scrollTextViewer );
 
 	updateColors ();
 
@@ -48,13 +56,11 @@ GUI_About::GUI_About ()
 	closeAbout.bckMargin = 6.0f;
 	closeAbout.setSize ( 48, 48 );
 	closeAbout.setWantsKeyboardFocus ( false );
-	addAndMakeVisible ( closeAbout );
+	body.addAndMakeVisible ( closeAbout );
 
-	closeAbout.onClick = []
-	{
-		if ( auto* broadcaster = UI::ab.load () )
-			broadcaster->sendActionMessage ( "closeAbout" );
-	};
+	closeAbout.onClick = [] {	broadcastClose ();	};
+
+	setWantsKeyboardFocus ( true );
 
 	loadContent ();
 }
@@ -64,6 +70,30 @@ void GUI_About::resized ()
 {
 	UI::setLayout ( layout, {	"UI/layouts/constants.json",
 								"UI/layouts/about.json" } );
+
+	shadowPath.clear ();
+	shadowPath.addRoundedRectangle ( body.getBounds ().toFloat (), 10.0f );
+}
+//-----------------------------------------------------------------------------
+
+void GUI_About::paint ( juce::Graphics& g )
+{
+	shadow.render ( g, shadowPath );
+
+	g.setColour ( findColour ( juce::TooltipWindow::backgroundColourId ) );
+	g.fillPath ( shadowPath );
+}
+//-----------------------------------------------------------------------------
+
+bool GUI_About::keyPressed ( const juce::KeyPress& key )
+{
+	if ( key == juce::KeyPress ( juce::KeyPress::escapeKey, juce::ModifierKeys::noModifiers, 0 ) )
+	{
+		broadcastClose ();
+		return true;
+	}
+
+	return false;
 }
 //-----------------------------------------------------------------------------
 
