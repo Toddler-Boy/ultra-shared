@@ -39,9 +39,10 @@ namespace datasource
 	// root the lime content hook maps onto pak entries in pak mode
 	[[ nodiscard ]] juce::File getCRTRoot ();
 
-	// SidTune::LoaderFunc-compatible: supplies the bytes of a data-relative
-	// tune path (the Exotic-tunes mirror), empty on a miss
-	void tuneLoader ( const char* fileName, std::vector<uint8_t>& bufferRef );
+	// The bytes of a data-relative path into a vector, empty on a miss. The
+	// out-param shape keeps it SidTune::LoaderFunc-compatible (ultraSID's
+	// Exotic-tunes mirror passes it straight to the engine)
+	void loadBytes ( const char* fileName, std::vector<uint8_t>& bufferRef );
 
 	// The real file behind a path, for developer tooling that writes factory
 	// data and for the factory folder watcher. In pak mode there is no such

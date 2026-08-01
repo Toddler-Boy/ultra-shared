@@ -391,7 +391,7 @@ juce::File datasource::getCRTRoot ()
 }
 //-----------------------------------------------------------------------------
 
-void datasource::tuneLoader ( const char* fileName, std::vector<uint8_t>& bufferRef )
+void datasource::loadBytes ( const char* fileName, std::vector<uint8_t>& bufferRef )
 {
 	const auto	mb = loadData ( fileName );
 	const auto	data = static_cast<const uint8_t*> ( mb.getData () );
