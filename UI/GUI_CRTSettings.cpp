@@ -26,12 +26,19 @@ GUI_CRTSettings::GUI_CRTSettings ()
 	settingsViewport.setViewedComponent ( &settingsContent, false );
 
 	addAndMakeVisible ( settingsViewport );
+
+	addChildComponent ( presetSaveDialog );
+	presetSaveDialog.onSave = [ this ] ( const juce::String& name ) {	savePresetNamed ( name );	};
 }
 //-----------------------------------------------------------------------------
 
 void GUI_CRTSettings::resized ()
 {
 	const auto	pos = settingsViewport.getViewPosition ();
+
+	// The viewport's scroll offset, for rows that anchor to content positions
+	// (the preset-save body); refreshed again when the dialog opens
+	settingsLayout.setConstant ( "viewY", pos.y );
 
 	UI::setLayout ( settingsLayout, {	"UI/layouts/constants.json",
 										"UI/layouts/crt-settings.json" } );
@@ -494,17 +501,20 @@ void GUI_CRTSettings::connectComponents ()
 			if ( id <= 0 )
 				return;
 
-			// Developer save: dump the live values as a new user preset file
-			// (rename it on disk for a real name) and select it
+			// One past the end: the save action. The combo snaps back to the
+			// stored preset while the dialog asks for a name; a selected user
+			// preset pre-fills it for easy overwriting
 			if ( id > presetMarkedNames.size () )
 			{
-				const auto	file = filepaths::getUserCRTPresetsPath ().getChildFile ( "Preset.yml" ).getNonexistentSibling ();
-				const auto	saved = crtpresets::saveCurrentValues ( *preferences, file.getFileNameWithoutExtension () );
+				updatePresetDisplay ();
 
-				if ( saved.isNotEmpty () )
-					preferences->set ( "crt/preset", saved );
+				// Re-layout so viewY carries the current scroll position
+				resized ();
 
-				refreshCRTPickLists ();
+				const auto	stored = preferences->get<juce::String> ( "crt/preset" );
+				const auto	userMarker = filepaths::markerFor ( filepaths::root::user ) + "/";
+
+				presetSaveDialog.show ( stored.startsWith ( userMarker ) ? stored.fromFirstOccurrenceOf ( "/", false, false ) : juce::String () );
 				return;
 			}
 
@@ -745,7 +755,6 @@ void GUI_CRTSettings::refreshCRTPickLists ()
 			menu.addItem ( item );
 		}
 
-		if ( filepaths::isDeveloperMode () )
 		{
 			menu.addSeparator ();
 
@@ -798,5 +807,47 @@ void GUI_CRTSettings::updatePresetDisplay ()
 
 	if ( const auto& custom = strings->get ( "crt/settings/crt/preset-custom" ); box->getText () != custom )
 		box->setText ( custom, juce::dontSendNotification );
+}
+//-----------------------------------------------------------------------------
+
+void GUI_CRTSettings::savePresetNamed ( const juce::String& name )
+{
+	// The name doubles as the file name
+	const auto	legal = juce::File::createLegalFileName ( name ).trim ();
+	if ( legal.isEmpty () )
+		return;
+
+	auto commit = [ this, legal ]
+	{
+		const auto	saved = crtpresets::saveCurrentValues ( *preferences, legal );
+
+		if ( saved.isNotEmpty () )
+			preferences->set ( "crt/preset", saved );
+
+		presetSaveDialog.dismiss ();
+		refreshCRTPickLists ();
+	};
+
+	if ( filepaths::getUserCRTPresetsPath ().getChildFile ( legal + ".yml" ).existsAsFile () )
+	{
+		const auto	options = juce::MessageBoxOptions ()
+								.withIconType ( juce::MessageBoxIconType::QuestionIcon )
+								.withTitle ( strings->get ( "crt/settings/crt/preset-replace-title" ) )
+								.withMessage ( strings->get ( "crt/settings/crt/preset-replace" ).replace ( "{}", legal ) )
+								.withButton ( strings->get ( "crt/settings/crt/preset-save-action" ) )
+								.withButton ( strings->get ( "crt/settings/crt/preset-cancel" ) )
+								.withAssociatedComponent ( this );
+
+		// 0 = the first button; the dialog stays up behind a declined overwrite
+		juce::NativeMessageBox::showAsync ( options, [ commit ] ( const int result )
+		{
+			if ( result == 0 )
+				commit ();
+		} );
+
+		return;
+	}
+
+	commit ();
 }
 //-----------------------------------------------------------------------------

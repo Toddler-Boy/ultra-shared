@@ -6,6 +6,7 @@
 #include "ultra-shared/Config/CRTPresets.h"
 #include "ultra-shared/Resources/Icons.h"
 #include "ultra-shared/Resources/Strings.h"
+#include "ultra-shared/UI/Components/GUI_PresetSaveDialog.h"
 #include "ultra-shared/Video/VIC2_Render.h"
 
 //-----------------------------------------------------------------------------
@@ -64,12 +65,18 @@ private:
 	void restorePresetScopeWidgets ();
 	void updatePresetDisplay ();
 
+	// Writes the live values under the dialog's name, confirming overwrites
+	// through a native message box first
+	void savePresetNamed ( const juce::String& name );
+
 	juce::SharedResourcePointer<Preferences>	preferences;
 	juce::SharedResourcePointer<Icons>			icons;
 	juce::SharedResourcePointer<Strings>		strings;
 
 	juce::Viewport	settingsViewport { "viewport" };
 	juce::Component	settingsContent { "content" };
+
+	GUI_PresetSaveDialog	presetSaveDialog;
 
 	std::unordered_map<juce::String, juce::Component*>	settingsComponentMap;
 

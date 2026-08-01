@@ -56,7 +56,6 @@ private:
 	GUI_ScrollTextViewer	scrollTextViewer;
 	GUI_SVG_Button			closeAbout { "close", { "about/close" } };
 
-	juce::Path				shadowPath;
 	melatonin::DropShadow	shadow { 12.0 };
 
 	gin::LayoutSupport	layout { *this };

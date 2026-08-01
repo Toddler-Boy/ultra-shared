@@ -70,18 +70,22 @@ void GUI_About::resized ()
 {
 	UI::setLayout ( layout, {	"UI/layouts/constants.json",
 								"UI/layouts/about.json" } );
-
-	shadowPath.clear ();
-	shadowPath.addRoundedRectangle ( body.getBounds ().toFloat (), 10.0f );
 }
 //-----------------------------------------------------------------------------
 
 void GUI_About::paint ( juce::Graphics& g )
 {
-	shadow.render ( g, shadowPath );
+	// Built here, not cached: the layout hot-reload can move the body
+	// without a resized() call
+	const auto	r = body.getBounds ().toFloat ();
+
+	juce::Path	p;
+	p.addRoundedRectangle ( r, UI::corner ( UI::corners::dialog_body, r ) );
+
+	shadow.render ( g, p );
 
 	g.setColour ( findColour ( juce::TooltipWindow::backgroundColourId ) );
-	g.fillPath ( shadowPath );
+	g.fillPath ( p );
 }
 //-----------------------------------------------------------------------------
 
