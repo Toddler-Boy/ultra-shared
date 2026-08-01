@@ -773,6 +773,7 @@ void GUI_CRTSettings::restorePresetScopeWidgets ()
 {
 	static const char* const	sliders[] =
 	{
+		"jailbars",
 		"noise", "sharpening", "luma-blur", "chroma-blur", "crosstalk", "hannover", "rainbowing", "drift",
 		"curve", "bleed", "convergence", "h-wave", "expansion",
 		"scanlines", "mask", "phosphor", "vignette", "adjacent", "halation", "ambient", "reflection"

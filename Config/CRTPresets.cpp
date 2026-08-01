@@ -15,13 +15,21 @@ namespace
 	{
 		const char*	key;
 		kind		k;
+		bool		saved = true;	// false: never captured by saving, only hand-authored files pin it
 	};
 
-	// The preset scope in panel order: noise through reflections. Jailbars
-	// (a VIC-II artifact, not a TV property) and everything outside the crt
-	// section stay personal
+	// The preset scope in panel order: jailbars through reflections;
+	// everything outside the crt section stays personal. Presets carry only
+	// the keys present in their file; missing keys leave the live value
+	// alone and stay out of the Custom comparison. The unsaved keys are
+	// personal taste (reflection) or chip artifacts (jailbars): saving never
+	// captures them, but a hand-authored preset may pin them — an
+	// emulator-look preset (VICE, C64 Ultimate) carries jailbars: 0 because
+	// those don't emulate it
 	constexpr scopeEntry	presetScope[] =
 	{
+		{ "jailbars",		kind::number,	false },
+
 		{ "noise",			kind::number },
 		{ "sharpening",		kind::number },
 		{ "luma-blur",		kind::number },
@@ -49,7 +57,7 @@ namespace
 		{ "adjacent",		kind::number },
 		{ "halation",		kind::number },
 		{ "ambient",		kind::number },
-		{ "reflection",		kind::number },
+		{ "reflection",		kind::number,	false },
 	};
 	//-------------------------------------------------------------------------
 
@@ -141,6 +149,9 @@ juce::String crtpresets::saveCurrentValues ( const Preferences& preferences, con
 
 	for ( const auto& s : presetScope )
 	{
+		if ( ! s.saved )
+			continue;
+
 		const auto	path = "crt/" + juce::String ( s.key );
 
 		juce::String	str;
