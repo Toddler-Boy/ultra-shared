@@ -3,7 +3,7 @@
 #include <numbers>
 
 #include "ultra-shared/Config/DataSource.h"
-#include "Helpers/ImageUtils.h"
+#include "ultra-shared/Helpers/ImageUtils.h"
 
 #include "VIC2_Render.h"
 
