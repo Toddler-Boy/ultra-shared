@@ -178,6 +178,7 @@ lime::CRTEmulation::settings GUI_CRTSettings::getCRTEmulationSettingsFromPrefere
 	set.decPhaseError = preferences->get<int> ( "crt/drift" );
 
 	set.crtCurve = preferences->get<int> ( "crt/curve" );
+	set.crtRotation = preferences->get<int> ( "crt/rotation" );
 	set.crtBleed = preferences->get<int> ( "crt/bleed" );
 	set.crtBleedRed = preferences->get<YamlFile::vec2i> ( "crt/bleed-red" );
 	set.crtBleedGreen = preferences->get<YamlFile::vec2i> ( "crt/bleed-green" );
@@ -420,6 +421,7 @@ void GUI_CRTSettings::connectComponents ()
 	sliderConnect ( "crt/disabler/drift" );
 
 	sliderConnect ( "crt/disabler/curve" );
+	sliderConnect ( "crt/disabler/rotation" );
 	sliderConnect ( "crt/disabler/bleed" );
 	sliderConnect ( "crt/disabler/h-wave" );
 	sliderConnect ( "crt/disabler/convergence" );

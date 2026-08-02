@@ -48,6 +48,7 @@ namespace sharedpreferences
 			{ "crt",		"drift",				20 },
 
 			{ "crt",		"curve",				25 },
+			{ "crt",		"rotation",				0 },
 			{ "crt",		"bleed",				20 },
 			{ "crt",		"bleed-red",			YamlFile::vec2i { -100, 0 } },
 			{ "crt",		"bleed-green",			YamlFile::vec2i { 75, -75 } },
