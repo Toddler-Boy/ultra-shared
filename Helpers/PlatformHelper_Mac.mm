@@ -40,7 +40,7 @@ static CGFloat defaultFrameRadius ()
 	return radius;
 }
 
-void setWindowProperties ( void* windowHandle, unsigned int /*titleColor*/ )
+void setWindowProperties ( void* windowHandle, unsigned int titleColor )
 {
 	auto view = (NSView*) windowHandle;
 
@@ -60,6 +60,17 @@ void setWindowProperties ( void* windowHandle, unsigned int /*titleColor*/ )
 	}
 
 	view.layer.cornerRadius = radius;
+
+	// The title bar takes the app's color instead of the native look
+	if ( NSWindow* window = view.window )
+	{
+		CGFloat r = ( ( titleColor >> 16 ) & 0xFF ) / 255.0;
+		CGFloat g = ( ( titleColor >> 8  ) & 0xFF ) / 255.0;
+		CGFloat b = ( (   titleColor     ) & 0xFF ) / 255.0;
+
+		window.titlebarAppearsTransparent = YES;
+		window.backgroundColor = [NSColor colorWithRed:r green:g blue:b alpha:1.0];
+	}
 }
 
 #include <mach/mach.h>
