@@ -210,6 +210,7 @@ lime::CRTEmulation::settings GUI_CRTSettings::getCRTEmulationSettingsFromPrefere
 	set.webcamBrightness = preferences->get<int> ( "webcam/brightness" );
 	set.webcamContrast = preferences->get<int> ( "webcam/contrast" );
 	set.webcamSaturation = preferences->get<int> ( "webcam/saturation" );
+	set.webcamZoom = preferences->get<int> ( "webcam/zoom" );
 
 	return set;
 }
@@ -472,6 +473,7 @@ void GUI_CRTSettings::connectComponents ()
 		componentutils::findComponent<GUI_CRTSliderIcon> ( "crt/disabler/disabler/brightness", settingsComponentMap )->onValueChange = timedSlider60;
 		componentutils::findComponent<GUI_CRTSliderIcon> ( "crt/disabler/disabler/contrast", settingsComponentMap )->onValueChange = timedSlider60;
 		componentutils::findComponent<GUI_CRTSliderIcon> ( "crt/disabler/disabler/saturation", settingsComponentMap )->onValueChange = timedSlider60;
+		componentutils::findComponent<GUI_CRTSliderIcon> ( "crt/disabler/disabler/zoom", settingsComponentMap )->onValueChange = timedSlider60;
 
 		// Device selector (items come from refreshWebcamDevices)
 		auto	deviceBrowser = componentutils::findComponent<juce::ComboBox> ( "crt/disabler/disabler/device", settingsComponentMap );

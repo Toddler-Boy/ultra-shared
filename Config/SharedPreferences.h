@@ -72,6 +72,7 @@ namespace sharedpreferences
 			{ "webcam",		"brightness",			50 },
 			{ "webcam",		"contrast",				50 },
 			{ "webcam",		"saturation",			50 },
+			{ "webcam",		"zoom",					0 },
 		};
 	}
 }
