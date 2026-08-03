@@ -106,9 +106,11 @@ void C64uScanner::run ()
 
 	Z_LOG ( "C64uScanner loop started" );
 
+	std::atomic<bool>	found = false;
+
 	for ( const auto& targetIP : ipsToScan )
 	{
-		pool.addJob ( [ &pool, targetIP, this ]
+		pool.addJob ( [ &pool, &found, targetIP, this ]
 		{
 			juce::StreamingSocket   socket;
 
@@ -118,6 +120,8 @@ void C64uScanner::run ()
 
 				if ( auto hostName = isActualC64u ( socket ); hostName.isNotEmpty () )
 				{
+					found = true;
+
 					if ( callback )
 						callback ( targetIP + " (" + hostName + ")" );
 
@@ -137,6 +141,10 @@ void C64uScanner::run ()
 
 		wait ( 50 );
 	}
+
+	// A fruitless sweep reports too, so the caller can schedule a retry
+	if ( ! found && callback )
+		callback ( {} );
 }
 //-----------------------------------------------------------------------------
 
