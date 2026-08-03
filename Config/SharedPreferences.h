@@ -58,7 +58,6 @@ namespace sharedpreferences
 			{ "crt",		"h-wave",				50 },
 			{ "crt",		"expansion",			50 },
 			{ "crt",		"scanlines",			35 },
-			{ "crt",		"scanline-shape",		0 },
 			{ "crt",		"mask",					25 },
 			{ "crt",		"mask-bitmap",			"Slot Mask" },
 			{ "crt",		"phosphor-decay",		60 },

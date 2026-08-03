@@ -189,7 +189,6 @@ lime::CRTEmulation::settings GUI_CRTSettings::getCRTEmulationSettingsFromPrefere
 	set.crtBloomExpansion = preferences->get<int> ( "crt/expansion" );
 
 	set.crtScanlines = preferences->get<int> ( "crt/scanlines" );
-	set.crtScanlineShape = preferences->get<int> ( "crt/scanline-shape" );
 	set.crtMask = preferences->get<int> ( "crt/mask" );
 
 	{
@@ -438,7 +437,6 @@ void GUI_CRTSettings::connectComponents ()
 	sliderConnect ( "crt/disabler/convergence" );
 	sliderConnect ( "crt/disabler/expansion" );
 	sliderConnect ( "crt/disabler/scanlines" );
-	sliderConnect ( "crt/disabler/scanline-shape" );
 	sliderConnect ( "crt/disabler/mask" );
 	sliderConnect ( "crt/disabler/phosphor" );
 	sliderConnect ( "crt/disabler/vignette" );
@@ -789,7 +787,7 @@ void GUI_CRTSettings::restorePresetScopeWidgets ()
 		"jailbars",
 		"noise", "sharpening", "luma-blur", "chroma-blur", "crosstalk", "pal-only/phase", "pal-only/hannover", "ntsc-only/rainbowing", "drift",
 		"curve", "rotation", "bleed", "convergence", "h-wave", "expansion",
-		"scanlines", "scanline-shape", "mask", "phosphor", "vignette", "adjacent", "halation", "ambient", "reflection"
+		"scanlines", "mask", "phosphor", "vignette", "adjacent", "halation", "ambient", "reflection"
 	};
 
 	for ( const auto* name : sliders )

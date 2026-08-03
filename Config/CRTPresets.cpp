@@ -51,7 +51,6 @@ namespace
 		{ "expansion",		kind::number },
 
 		{ "scanlines",		kind::number },
-		{ "scanline-shape",	kind::number },
 		{ "mask",			kind::number },
 		{ "mask-bitmap",	kind::name },
 		{ "phosphor-decay",	kind::number },
