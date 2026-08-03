@@ -239,6 +239,8 @@ void GUI_CRTSettings::updateCRTsettingsUI ()
 	// Set palette
 	auto	palette = componentutils::findComponent<GUI_VIC2_Palette> ( "tv/palette", settingsComponentMap );
 	palette->setSettings ( vic2Settings.standard, vic2Settings.brightness, vic2Settings.contrast, vic2Settings.saturation, vic2Settings.firstLuma );
+
+	updateDisablers ();
 }
 //-----------------------------------------------------------------------------
 
@@ -255,6 +257,12 @@ void GUI_CRTSettings::updateDisablers ()
 	updateDisabler ( "overlay", "enabled" );
 	updateDisabler ( "crt", "emulation" );
 	updateDisabler ( "crt/disabler", "webcam" );
+
+	// The standard-specific decoder controls follow the effective TV standard
+	const auto	isNTSC = getVIC2SettingsFromPreferences ().standard == VIC2_Render::settings::NTSC;
+
+	componentutils::findComponent<GUI_Disabler> ( "crt/disabler/pal-only", settingsComponentMap )->setEnabled ( ! isNTSC );
+	componentutils::findComponent<GUI_Disabler> ( "crt/disabler/ntsc-only", settingsComponentMap )->setEnabled ( isNTSC );
 }
 //-----------------------------------------------------------------------------
 
@@ -418,9 +426,9 @@ void GUI_CRTSettings::connectComponents ()
 	sliderConnect ( "crt/disabler/luma-blur" );
 	sliderConnect ( "crt/disabler/chroma-blur" );
 	sliderConnect ( "crt/disabler/crosstalk" );
-	sliderConnect ( "crt/disabler/phase" );
-	sliderConnect ( "crt/disabler/hannover" );
-	sliderConnect ( "crt/disabler/rainbowing" );
+	sliderConnect ( "crt/disabler/pal-only/phase" );
+	sliderConnect ( "crt/disabler/pal-only/hannover" );
+	sliderConnect ( "crt/disabler/ntsc-only/rainbowing" );
 	sliderConnect ( "crt/disabler/drift" );
 
 	sliderConnect ( "crt/disabler/curve" );
@@ -779,7 +787,7 @@ void GUI_CRTSettings::restorePresetScopeWidgets ()
 	static const char* const	sliders[] =
 	{
 		"jailbars",
-		"noise", "sharpening", "luma-blur", "chroma-blur", "crosstalk", "phase", "hannover", "rainbowing", "drift",
+		"noise", "sharpening", "luma-blur", "chroma-blur", "crosstalk", "pal-only/phase", "pal-only/hannover", "ntsc-only/rainbowing", "drift",
 		"curve", "rotation", "bleed", "convergence", "h-wave", "expansion",
 		"scanlines", "scanline-shape", "mask", "phosphor", "vignette", "adjacent", "halation", "ambient", "reflection"
 	};
