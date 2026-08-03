@@ -40,6 +40,7 @@ namespace
 		{ "drift",			kind::number },
 
 		{ "curve",			kind::number },
+		{ "rotation",		kind::number },
 		{ "bleed",			kind::number },
 		{ "bleed-red",		kind::pair },
 		{ "bleed-green",	kind::pair },
@@ -121,6 +122,10 @@ juce::StringArray crtpresets::listPresets ()
 		factory.add ( name.upToLastOccurrenceOf ( ".", false, false ) );
 	factory.sortNatural ();
 
+	// Default leads the factory list
+	if ( const auto idx = factory.indexOf ( "Default" ); idx > 0 )
+		factory.move ( idx, 0 );
+
 	juce::StringArray	user;
 	if ( const auto root = filepaths::getUserCRTPresetsPath (); root != juce::File () )
 		for ( const auto& f : root.findChildFiles ( juce::File::findFiles | juce::File::ignoreHiddenFiles, false, "*.yml" ) )
@@ -139,10 +144,30 @@ juce::StringArray crtpresets::listPresets ()
 }
 //-----------------------------------------------------------------------------
 
+// Developer authoring goes straight into the factory data; a naked data root
+// only ever boots in developer mode, so unpaked = the developer checkout
+static bool savesToFactory ()
+{
+	return ! datasource::isPak ();
+}
+//-----------------------------------------------------------------------------
+
+juce::File crtpresets::saveTargetFile ( const juce::String& name )
+{
+	if ( savesToFactory () )
+		return datasource::getDevFile ( "CRTEmulation/Presets/" + name + ".yml" );
+
+	if ( const auto root = filepaths::getUserCRTPresetsPath (); root != juce::File () )
+		return root.getChildFile ( name + ".yml" );
+
+	return {};
+}
+//-----------------------------------------------------------------------------
+
 juce::String crtpresets::saveCurrentValues ( const Preferences& preferences, const juce::String& name )
 {
-	const auto	root = filepaths::getUserCRTPresetsPath ();
-	if ( root == juce::File () )
+	const auto	file = saveTargetFile ( name );
+	if ( file == juce::File () )
 		return {};
 
 	juce::String	out ( "crt:\n" );
@@ -176,13 +201,13 @@ juce::String crtpresets::saveCurrentValues ( const Preferences& preferences, con
 		out += "  " + juce::String ( s.key ) + ": " + str + "\n";
 	}
 
-	if ( const auto file = root.getChildFile ( name + ".yml" ); ! file.replaceWithText ( out ) )
+	if ( ! file.replaceWithText ( out ) )
 	{
 		Z_ERR ( "Could not save CRT preset " << file.getFullPathName () );
 		return {};
 	}
 
-	return filepaths::markerFor ( filepaths::root::user ) + "/" + name;
+	return filepaths::markerFor ( savesToFactory () ? filepaths::root::data : filepaths::root::user ) + "/" + name;
 }
 //-----------------------------------------------------------------------------
 

@@ -15,8 +15,12 @@ namespace crtpresets
 	// Marked preset names, the factory group first, each group sorted
 	[[ nodiscard ]] juce::StringArray listPresets ();
 
-	// Writes the live scope values as a user preset; returns the marked name,
-	// empty when the file cannot be written
+	// Where a save with this name lands: the factory data of a developer
+	// checkout, the user folder otherwise; invalid when neither is writable
+	[[ nodiscard ]] juce::File saveTargetFile ( const juce::String& name );
+
+	// Writes the live scope values to the save target; returns the marked
+	// name, empty when the file cannot be written
 	juce::String saveCurrentValues ( const Preferences& preferences, const juce::String& name );
 }
 //-----------------------------------------------------------------------------

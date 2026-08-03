@@ -81,6 +81,11 @@ void GUI_PresetSaveDialog::visibilityChanged ()
 	// Top indent stays 0: the default pushes the text below center
 	nameEditor.setFont ( UI::font ( UI::fonts::dialog_entry ) );
 	nameEditor.setIndents ( int ( UI::paddingDef ( UI::paddings::dialog_entry ).left ), 0 );
+
+	const auto	txtCol = findColour ( UI::colors::text );
+	nameEditor.setColour ( juce::TextEditor::textColourId, txtCol );
+	nameEditor.setColour ( juce::TextEditor::backgroundColourId, UI::getShade ( 0.02f ) );
+	nameEditor.applyColourToAllText ( txtCol );
 }
 //-----------------------------------------------------------------------------
 

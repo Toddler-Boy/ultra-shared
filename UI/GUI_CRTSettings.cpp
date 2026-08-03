@@ -506,8 +506,8 @@ void GUI_CRTSettings::connectComponents ()
 				return;
 
 			// One past the end: the save action. The combo snaps back to the
-			// stored preset while the dialog asks for a name; a selected user
-			// preset pre-fills it for easy overwriting
+			// stored preset while the dialog asks for a name; the current
+			// preset pre-fills it for easy saving of a variation
 			if ( id > presetMarkedNames.size () )
 			{
 				updatePresetDisplay ();
@@ -515,10 +515,7 @@ void GUI_CRTSettings::connectComponents ()
 				// Re-layout so viewY carries the current scroll position
 				resized ();
 
-				const auto	stored = preferences->get<juce::String> ( "crt/preset" );
-				const auto	userMarker = filepaths::markerFor ( filepaths::root::user ) + "/";
-
-				presetSaveDialog.show ( stored.startsWith ( userMarker ) ? stored.fromFirstOccurrenceOf ( "/", false, false ) : juce::String () );
+				presetSaveDialog.show ( parseMarkedName ( preferences->get<juce::String> ( "crt/preset" ) ).first );
 				return;
 			}
 
@@ -779,7 +776,7 @@ void GUI_CRTSettings::restorePresetScopeWidgets ()
 	{
 		"jailbars",
 		"noise", "sharpening", "luma-blur", "chroma-blur", "crosstalk", "hannover", "rainbowing", "drift",
-		"curve", "bleed", "convergence", "h-wave", "expansion",
+		"curve", "rotation", "bleed", "convergence", "h-wave", "expansion",
 		"scanlines", "mask", "phosphor", "vignette", "adjacent", "halation", "ambient", "reflection"
 	};
 
@@ -833,7 +830,7 @@ void GUI_CRTSettings::savePresetNamed ( const juce::String& name )
 		refreshCRTPickLists ();
 	};
 
-	if ( filepaths::getUserCRTPresetsPath ().getChildFile ( legal + ".yml" ).existsAsFile () )
+	if ( crtpresets::saveTargetFile ( legal ).existsAsFile () )
 	{
 		const auto	options = juce::MessageBoxOptions ()
 								.withIconType ( juce::MessageBoxIconType::QuestionIcon )
