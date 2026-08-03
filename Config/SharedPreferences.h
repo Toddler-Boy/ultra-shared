@@ -61,7 +61,7 @@ namespace sharedpreferences
 			{ "crt",		"scanline-shape",		0 },
 			{ "crt",		"mask",					25 },
 			{ "crt",		"mask-bitmap",			"Slot Mask" },
-			{ "crt",		"phosphor-decay",		40 },
+			{ "crt",		"phosphor-decay",		60 },
 
 			{ "crt",		"adjacent",				50 },
 			{ "crt",		"halation",				50 },
