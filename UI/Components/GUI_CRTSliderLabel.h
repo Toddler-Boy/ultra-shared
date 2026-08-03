@@ -13,7 +13,8 @@
 class GUI_CRTSliderLabel final : public juce::Component
 {
 public:
-	GUI_CRTSliderLabel ( const juce::String& setSection, const juce::String& setName, const bool bidirectional = false );
+	GUI_CRTSliderLabel ( const juce::String& setSection, const juce::String& setName, const bool bidirectional = false,
+						 const double maxValue = 100.0, const double step = 1.0 );
 
 	// juce::Component
 	void resized () override;

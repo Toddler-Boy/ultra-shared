@@ -9,7 +9,7 @@
 
 namespace
 {
-	enum class kind { number, pair, name };
+	enum class kind { number, decimal, pair, name };
 
 	struct scopeEntry
 	{
@@ -35,6 +35,7 @@ namespace
 		{ "luma-blur",		kind::number },
 		{ "chroma-blur",	kind::number },
 		{ "crosstalk",		kind::number },
+		{ "phase",			kind::decimal },
 		{ "hannover",		kind::number },
 		{ "rainbowing",		kind::number },
 		{ "drift",			kind::number },
@@ -50,6 +51,7 @@ namespace
 		{ "expansion",		kind::number },
 
 		{ "scanlines",		kind::number },
+		{ "scanline-shape",	kind::number },
 		{ "mask",			kind::number },
 		{ "mask-bitmap",	kind::name },
 		{ "phosphor-decay",	kind::number },
@@ -71,6 +73,7 @@ namespace
 			switch ( s.k )
 			{
 				case kind::number:	out.push_back ( { "crt", s.key, 0 } );						break;
+				case kind::decimal:	out.push_back ( { "crt", s.key, 0.0f } );					break;
 				case kind::pair:	out.push_back ( { "crt", s.key, YamlFile::vec2i {} } );		break;
 				case kind::name:	out.push_back ( { "crt", s.key, std::string () } );			break;
 			}
@@ -186,6 +189,10 @@ juce::String crtpresets::saveCurrentValues ( const Preferences& preferences, con
 				str = juce::String ( preferences.get<int> ( path ) );
 				break;
 
+			case kind::decimal:
+				str = juce::String ( preferences.get<float> ( path ) );
+				break;
+
 			case kind::pair:
 			{
 				const auto	v = preferences.get<YamlFile::vec2i> ( path );
@@ -242,6 +249,7 @@ void CRTPreset::load ( const juce::String& markedName )
 		switch ( s.k )
 		{
 			case kind::number:	entries.push_back ( { path, file.get<int> ( path ) } );					break;
+			case kind::decimal:	entries.push_back ( { path, file.get<float> ( path ) } );				break;
 			case kind::pair:	entries.push_back ( { path, file.get<YamlFile::vec2i> ( path ) } );		break;
 			case kind::name:	entries.push_back ( { path, file.get<std::string> ( path ) } );			break;
 		}
@@ -258,6 +266,10 @@ void CRTPreset::applyTo ( Preferences& preferences ) const
 		if ( const auto* n = std::get_if<int> ( &e.value ) )
 		{
 			preferences.set ( e.path, *n );
+		}
+		else if ( const auto* d = std::get_if<float> ( &e.value ) )
+		{
+			preferences.set ( e.path, *d );
 		}
 		else if ( const auto* p = std::get_if<YamlFile::vec2i> ( &e.value ) )
 		{
@@ -282,6 +294,11 @@ bool CRTPreset::matches ( const Preferences& preferences ) const
 		if ( const auto* n = std::get_if<int> ( &e.value ) )
 		{
 			if ( preferences.get<int> ( e.path ) != *n )
+				return false;
+		}
+		else if ( const auto* d = std::get_if<float> ( &e.value ) )
+		{
+			if ( preferences.get<float> ( e.path ) != *d )
 				return false;
 		}
 		else if ( const auto* p = std::get_if<YamlFile::vec2i> ( &e.value ) )

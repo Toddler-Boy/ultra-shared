@@ -150,7 +150,9 @@ std::pair<juce::Component*, bool> sharedComponentFactory ( const juce::String& c
 	// crt-slider-label
 	//
 	if ( compType == "crt-slider-label" )
-		return { new GUI_CRTSliderLabel ( typeParts[ 0 ], typeParts[ 1 ], typeParts[ 2 ].equalsIgnoreCase ( "true" ) ), false };
+		return { new GUI_CRTSliderLabel ( typeParts[ 0 ], typeParts[ 1 ], typeParts[ 2 ].equalsIgnoreCase ( "true" ),
+										  typeParts[ 3 ].isEmpty () ? 100.0 : typeParts[ 3 ].getDoubleValue (),
+										  typeParts[ 4 ].isEmpty () ? 1.0 : typeParts[ 4 ].getDoubleValue () ), false };
 
 	//
 	// crt-slider-icon

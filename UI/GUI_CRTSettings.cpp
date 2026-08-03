@@ -173,6 +173,7 @@ lime::CRTEmulation::settings GUI_CRTSettings::getCRTEmulationSettingsFromPrefere
 	set.decLumaBlur = preferences->get<int> ( "crt/luma-blur" );
 	set.decChromaBlur = preferences->get<int> ( "crt/chroma-blur" );
 	set.decCrosstalk = preferences->get<int> ( "crt/crosstalk" );
+	set.decPALPhase = preferences->get<float> ( "crt/phase" );
 	set.decHannover = preferences->get<int> ( "crt/hannover" );
 	set.decRainbowing = preferences->get<int> ( "crt/rainbowing" );
 	set.decPhaseError = preferences->get<int> ( "crt/drift" );
@@ -188,6 +189,7 @@ lime::CRTEmulation::settings GUI_CRTSettings::getCRTEmulationSettingsFromPrefere
 	set.crtBloomExpansion = preferences->get<int> ( "crt/expansion" );
 
 	set.crtScanlines = preferences->get<int> ( "crt/scanlines" );
+	set.crtScanlineShape = preferences->get<int> ( "crt/scanline-shape" );
 	set.crtMask = preferences->get<int> ( "crt/mask" );
 
 	{
@@ -416,6 +418,7 @@ void GUI_CRTSettings::connectComponents ()
 	sliderConnect ( "crt/disabler/luma-blur" );
 	sliderConnect ( "crt/disabler/chroma-blur" );
 	sliderConnect ( "crt/disabler/crosstalk" );
+	sliderConnect ( "crt/disabler/phase" );
 	sliderConnect ( "crt/disabler/hannover" );
 	sliderConnect ( "crt/disabler/rainbowing" );
 	sliderConnect ( "crt/disabler/drift" );
@@ -427,6 +430,7 @@ void GUI_CRTSettings::connectComponents ()
 	sliderConnect ( "crt/disabler/convergence" );
 	sliderConnect ( "crt/disabler/expansion" );
 	sliderConnect ( "crt/disabler/scanlines" );
+	sliderConnect ( "crt/disabler/scanline-shape" );
 	sliderConnect ( "crt/disabler/mask" );
 	sliderConnect ( "crt/disabler/phosphor" );
 	sliderConnect ( "crt/disabler/vignette" );
@@ -775,9 +779,9 @@ void GUI_CRTSettings::restorePresetScopeWidgets ()
 	static const char* const	sliders[] =
 	{
 		"jailbars",
-		"noise", "sharpening", "luma-blur", "chroma-blur", "crosstalk", "hannover", "rainbowing", "drift",
+		"noise", "sharpening", "luma-blur", "chroma-blur", "crosstalk", "phase", "hannover", "rainbowing", "drift",
 		"curve", "rotation", "bleed", "convergence", "h-wave", "expansion",
-		"scanlines", "mask", "phosphor", "vignette", "adjacent", "halation", "ambient", "reflection"
+		"scanlines", "scanline-shape", "mask", "phosphor", "vignette", "adjacent", "halation", "ambient", "reflection"
 	};
 
 	for ( const auto* name : sliders )
