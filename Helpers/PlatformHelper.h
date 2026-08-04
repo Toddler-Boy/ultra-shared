@@ -14,6 +14,10 @@ void setWindowProperties ( void* windowHandle, unsigned int titleColor );
 // Free physical RAM right now; 0 if the query failed
 [[ nodiscard ]] int64_t availableMemoryBytes ();
 
+// Startup only: a slow launch forfeits Windows' foreground right and the
+// window opens behind everything; this claims it back. No-op elsewhere
+void bringWindowToForeground ( void* windowHandle );
+
 // The OS-configured digit grouping where the C locale environment is blind
 // (macOS GUI apps get no LANG); the defaults double as the American fallback
 struct NumberGrouping

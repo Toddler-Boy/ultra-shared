@@ -65,4 +65,23 @@ NumberGrouping userNumberGrouping ()
 }
 //-----------------------------------------------------------------------------
 
+void bringWindowToForeground ( void* windowHandle )
+{
+	const auto	hwnd = (HWND) windowHandle;
+
+	// SetForegroundWindow only obeys the thread that owns the foreground;
+	// borrow its input state for the one call
+	const auto	fg = GetForegroundWindow ();
+	const auto	fgThread = fg ? GetWindowThreadProcessId ( fg, nullptr ) : 0;
+	const auto	ourThread = GetCurrentThreadId ();
+	const auto	attached = fgThread && fgThread != ourThread && AttachThreadInput ( fgThread, ourThread, TRUE );
+
+	SetForegroundWindow ( hwnd );
+	BringWindowToTop ( hwnd );
+
+	if ( attached )
+		AttachThreadInput ( fgThread, ourThread, FALSE );
+}
+//-----------------------------------------------------------------------------
+
 #endif

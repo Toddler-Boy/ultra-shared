@@ -91,6 +91,11 @@ int64_t availableMemoryBytes ()
 	return 0;
 }
 
+void bringWindowToForeground ( void* )
+{
+	// LaunchServices activates freshly launched apps; nothing to reclaim
+}
+
 // Asks the user's region settings via CFNumberFormatter: exact separator and
 // group sizes, independent of the BSD locale database and its naming
 NumberGrouping userNumberGrouping ()
