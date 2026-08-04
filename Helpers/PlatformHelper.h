@@ -13,4 +13,16 @@ void setWindowProperties ( void* windowHandle, unsigned int titleColor );
 
 // Free physical RAM right now; 0 if the query failed
 [[ nodiscard ]] int64_t availableMemoryBytes ();
+
+// The OS-configured digit grouping where the C locale environment is blind
+// (macOS GUI apps get no LANG); the defaults double as the American fallback
+struct NumberGrouping
+{
+	bool	valid = false;			// The platform answered (macOS only)
+	wchar_t	separator = L',';
+	int		groupSize = 3;			// 0 = the user disabled grouping
+	int		secondaryGroupSize = 0;	// 0 = groupSize repeats (India: 3, then 2s)
+};
+
+[[ nodiscard ]] NumberGrouping userNumberGrouping ();
 //-----------------------------------------------------------------------------

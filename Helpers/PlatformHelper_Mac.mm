@@ -1,3 +1,5 @@
+#include "ultra-shared/Helpers/PlatformHelper.h"
+
 #if __APPLE__
 #include <Cocoa/Cocoa.h>
 #import <Foundation/Foundation.h>
@@ -87,5 +89,55 @@ int64_t availableMemoryBytes ()
 		return int64_t ( vmstat.free_count + vmstat.inactive_count ) * int64_t ( pageSize );
 
 	return 0;
+}
+
+// Asks the user's region settings via CFNumberFormatter: exact separator and
+// group sizes, independent of the BSD locale database and its naming
+NumberGrouping userNumberGrouping ()
+{
+	NumberGrouping	g;
+
+	auto	locale = CFLocaleCopyCurrent ();
+	auto	formatter = CFNumberFormatterCreate ( kCFAllocatorDefault, locale, kCFNumberFormatterDecimalStyle );
+	CFRelease ( locale );
+
+	if ( ! formatter )
+		return g;
+
+	g.valid = true;
+
+	auto readInt = [ formatter ] ( CFStringRef key )
+	{
+		int	v = 0;
+		if ( auto num = (CFNumberRef) CFNumberFormatterCopyProperty ( formatter, key ) )
+		{
+			CFNumberGetValue ( num, kCFNumberIntType, &v );
+			CFRelease ( num );
+		}
+		return v;
+	};
+
+	if ( const auto size = readInt ( kCFNumberFormatterGroupingSize ); size > 0 )
+		g.groupSize = size;
+
+	g.secondaryGroupSize = readInt ( kCFNumberFormatterSecondaryGroupingSize );
+
+	if ( auto sep = (CFStringRef) CFNumberFormatterCopyProperty ( formatter, kCFNumberFormatterGroupingSeparator ) )
+	{
+		if ( CFStringGetLength ( sep ) > 0 )
+			g.separator = wchar_t ( CFStringGetCharacterAtIndex ( sep, 0 ) );
+		CFRelease ( sep );
+	}
+
+	if ( auto uses = (CFBooleanRef) CFNumberFormatterCopyProperty ( formatter, kCFNumberFormatterUseGroupingSeparator ) )
+	{
+		if ( ! CFBooleanGetValue ( uses ) )
+			g.groupSize = 0;
+		CFRelease ( uses );
+	}
+
+	CFRelease ( formatter );
+
+	return g;
 }
 #endif

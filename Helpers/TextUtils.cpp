@@ -5,7 +5,36 @@
 #include <string>
 
 #include "ultra-shared/Helpers/TextUtils.h"
+#include "ultra-shared/Helpers/PlatformHelper.h"
 
+//-----------------------------------------------------------------------------
+
+namespace
+{
+	// Grouping facet for machines where the environment lookup lands on "C"
+	// (GUI apps on macOS get no LANG): the OS-configured grouping, and the
+	// struct's defaults are the American fallback
+	struct GroupedPunct final : std::numpunct<wchar_t>
+	{
+		explicit GroupedPunct ( const NumberGrouping& setGrouping ) : grouping ( setGrouping ) {}
+
+		wchar_t do_thousands_sep () const override { return grouping.separator; }
+
+		std::string do_grouping () const override
+		{
+			if ( grouping.groupSize <= 0 )
+				return {};
+
+			std::string	sizes ( 1, char ( grouping.groupSize ) );
+			if ( grouping.secondaryGroupSize > 0 )
+				sizes += char ( grouping.secondaryGroupSize );
+
+			return sizes;
+		}
+
+		NumberGrouping	grouping;
+	};
+}
 //-----------------------------------------------------------------------------
 
 const std::locale& textutils::userLocale ()
@@ -14,8 +43,14 @@ const std::locale& textutils::userLocale ()
 	// name does not resolve, so it happens once
 	static const auto	loc = []
 	{
-		try				{	return std::locale ( "" );		}
-		catch ( ... )	{	return std::locale::classic ();	}
+		try
+		{
+			if ( auto l = std::locale ( "" ); l.name () != "C" && l.name () != "POSIX" )
+				return l;
+		}
+		catch ( ... ) {}
+
+		return std::locale ( std::locale::classic (), new GroupedPunct ( userNumberGrouping () ) );
 	} ();
 
 	return loc;

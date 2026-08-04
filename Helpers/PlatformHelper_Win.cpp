@@ -58,4 +58,11 @@ int64_t availableMemoryBytes ()
 }
 //-----------------------------------------------------------------------------
 
+NumberGrouping userNumberGrouping ()
+{
+	// std::locale ( "" ) reads the region settings here, no help needed
+	return {};
+}
+//-----------------------------------------------------------------------------
+
 #endif
