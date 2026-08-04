@@ -1,6 +1,6 @@
 #include <JuceHeader.h>
 
-#include <format>
+#include <fmt/xchar.h>
 #include <locale>
 #include <string>
 
@@ -40,6 +40,6 @@ juce::String textutils::getHumanNumber ( const int64_t number )
 	// Formatted wide: numpunct<char> can only hand back a single byte, so a locale that
 	// groups with a no-break space would arrive as one invalid UTF-8 byte. juce::String
 	// converts from wchar_t properly
-	return juce::String ( std::format ( userLocale (), L"{:L}", number ).c_str () );
+	return juce::String ( fmt::format ( userLocale (), L"{:L}", number ).c_str () );
 }
 //-----------------------------------------------------------------------------
