@@ -45,7 +45,9 @@ const std::locale& textutils::userLocale ()
 	{
 		try
 		{
-			if ( auto l = std::locale ( "" ); l.name () != "C" && l.name () != "POSIX" )
+			// Unconfigured environments surface as "C"/"POSIX" (BSD libc) or
+			// as a nameless locale (libc++)
+			if ( auto l = std::locale ( "" ); ! l.name ().empty () && l.name () != "C" && l.name () != "POSIX" )
 				return l;
 		}
 		catch ( ... ) {}
