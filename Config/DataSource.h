@@ -4,17 +4,18 @@
 
 //-----------------------------------------------------------------------------
 
-// All factory data comes through here. The backing store is either Data.pak
-// (the only layout users get) or the naked repo Data folder (developer mode),
-// resolved once on first use; consumers only ever see data-relative paths.
+// All factory data comes through here. The backing store is fixed per config:
+// Release reads Data.pak (the only layout users get), Debug and Development
+// read the repo Data folder baked in as ULTRA_DATA_DIR; consumers only ever
+// see data-relative paths.
 //
 // The lime shader stack reads its CRT data through lime::content, installed
 // in pak mode to route the nominal files under getCRTRoot () into the pak.
 
 namespace datasource
 {
-	// Release exes carry the pak appended and use it exclusively; a Data.pak
-	// next to a dev exe beats developer mode to test the pak code path
+	// Release: appended to the exe (bundled on mac), else a sibling Data.pak
+	// for local pak testing. Debug/Development: never a pak
 	[[ nodiscard ]] bool isPak ();
 
 	// Pak: the central directory parses and holds the CRT shaders.

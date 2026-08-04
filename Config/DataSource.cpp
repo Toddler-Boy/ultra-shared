@@ -36,7 +36,9 @@ namespace
 	}
 	//-----------------------------------------------------------------------------
 
-	[[ nodiscard ]] State fromPak ( const juce::File& pakFile )
+	// Which of the two builders resolve () uses is a config/platform matter,
+	// hence maybe_unused on both
+	[[ nodiscard, maybe_unused ]] State fromPak ( const juce::File& pakFile )
 	{
 		State	s;
 
@@ -189,7 +191,7 @@ namespace
 	}
 	//-----------------------------------------------------------------------------
 
-	[[ nodiscard ]] State fromFolder ( const juce::File& folder )
+	[[ nodiscard, maybe_unused ]] State fromFolder ( const juce::File& folder )
 	{
 		State	s;
 
@@ -202,31 +204,28 @@ namespace
 
 	[[ nodiscard ]] State resolve ()
 	{
-		#if JUCE_MAC
+		#ifdef ULTRA_DATA_DIR
+			// Debug/Development: the repo Data folder, baked in at compile time
+			// so the exe runs from anywhere. Never a pak
+			return fromFolder ( juce::File ( ULTRA_DATA_DIR ) );
+		#elif JUCE_MAC
 			// Everything ships inside the bundle: files can't go missing without
 			// breaking the code signature, which stops the app from launching at
 			// all, so there is nothing to probe
 			return fromPak ( juce::File::getSpecialLocation ( juce::File::currentApplicationFile ).getChildFile ( "Contents/Resources/Data.pak" ) );
 		#elif JUCE_WINDOWS
-			// Release: the pak rides appended to the exe and is the sole valid
-			// source — anything on disk is ignored, and a tail that doesn't
-			// parse fails hard instead of falling back. A dev exe carries no
-			// zip tail and probes on
+			// The pak rides appended to the exe and is the primary source: a
+			// tail that doesn't parse fails hard instead of falling back
 			const auto	exe = juce::File::getSpecialLocation ( juce::File::currentExecutableFile );
 			if ( PakFile::hasZipTail ( exe ) )
 				return fromPak ( exe );
 
-			// A pak next to a dev exe tests the pak code path. One that exists
-			// but doesn't parse fails hard on purpose
+			// No tail (a local Release build): a sibling Data.pak serves pak
+			// testing without the CI append step
 			if ( const auto pak = exe.getSiblingFile ( "Data.pak" ); pak.existsAsFile () )
 				return fromPak ( pak );
 
-			// Developer: naked Data in the working directory (the repo checkout)
-			if ( filepaths::isDeveloperMode () )
-				if ( auto d = juce::File::getCurrentWorkingDirectory ().getChildFile ( "Data" ); filepaths::hasDataContent ( d ) )
-					return fromFolder ( d );
-
-			// No data anywhere: keep the exe as the nominal source, a valid
+			// No pak anywhere: keep the exe as the nominal source, a valid
 			// absolute path that fails the content check
 			return fromPak ( exe );
 		#elif JUCE_LINUX
