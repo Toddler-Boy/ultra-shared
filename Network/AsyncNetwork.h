@@ -32,6 +32,7 @@ private:
 
 	juce::URL			baseAddress;
 	juce::String		c64uPassword;
+	bool				passwordLogged = false;
 
 	juce::CriticalSection		queueLock;
 	juce::Array<RequestData>	queue;

@@ -7,13 +7,6 @@
 
 C64uScanner::C64uScanner () : juce::Thread ( "C64uScanner" )
 {
-	request = "GET /v1/info HTTP/1.1\r\n\r\n";
-
-	const juce::SharedResourcePointer<Settings>	settings;
-
-	const auto	password = settings->get<juce::String> ( "network/password" );
-	if ( password.isNotEmpty () )
-		request = "GET /v1/info HTTP/1.1\r\nX-Password: " + password + "\r\n\r\n";
 }
 //-----------------------------------------------------------------------------
 
@@ -35,6 +28,19 @@ void C64uScanner::scan ( ScannerCallback _callback, juce::String& _lastIP )
 void C64uScanner::run ()
 {
 	Z_LOG ( "C64uScanner started" );
+
+	// Fresh per sweep: the password may have changed, and a stale refusal
+	// must not outlive the sweep that saw it
+	{
+		const juce::SharedResourcePointer<Settings>	settings;
+
+		request = "GET /v1/info HTTP/1.1\r\n\r\n";
+		if ( const auto password = settings->get<juce::String> ( "network/password" ); password.isNotEmpty () )
+			request = "GET /v1/info HTTP/1.1\r\nX-Password: " + password + "\r\n\r\n";
+
+		const juce::ScopedLock	sl ( lockedLock );
+		lockedIP.clear ();
+	}
 
 	NetworkHardwareChecker	hardware;
 
@@ -68,7 +74,7 @@ void C64uScanner::run ()
 		Z_ERR ( "C64uScanner failed to find any private network adapters" );
 
 		if ( callback )
-			callback ( {} );
+			callback ( {}, false );
 
 		return;
 	}
@@ -123,7 +129,7 @@ void C64uScanner::run ()
 					found = true;
 
 					if ( callback )
-						callback ( targetIP + " (" + hostName + ")" );
+						callback ( targetIP + " (" + hostName + ")", false );
 
 					pool.removeAllJobs ( false, 300 );
 				}
@@ -142,9 +148,13 @@ void C64uScanner::run ()
 		wait ( 50 );
 	}
 
-	// A fruitless sweep reports too, so the caller can schedule a retry
+	// A fruitless sweep reports too, so the caller can schedule a retry; a
+	// refusing C64u only counts when nothing answered properly
 	if ( ! found && callback )
-		callback ( {} );
+	{
+		const juce::ScopedLock	sl ( lockedLock );
+		callback ( lockedIP, lockedIP.isNotEmpty () );
+	}
 }
 //-----------------------------------------------------------------------------
 
@@ -166,6 +176,15 @@ juce::String C64uScanner::isActualC64u ( juce::StreamingSocket& socket )
 			Z_INFO ( "C64uScanner found a C64u at " + socket.getHostName () + " with hostname: " + json[ "hostname" ].toString () );
 
 			return json[ "hostname" ].toString ();
+		}
+
+		// The API answers 403 to a missing or wrong password
+		if ( response.startsWith ( "HTTP/1.1 403" ) )
+		{
+			Z_INFO ( "C64uScanner got a password refusal from " + socket.getHostName () );
+
+			const juce::ScopedLock	sl ( lockedLock );
+			lockedIP = socket.getHostName ();
 		}
 	}
 	else

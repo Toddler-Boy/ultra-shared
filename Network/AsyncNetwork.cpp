@@ -25,6 +25,17 @@ void AsyncNetwork::setBaseAddress ( const juce::String& url )
 
 void AsyncNetwork::setC64uPassword ( const juce::String& password )
 {
+	// A set-but-missing password makes the C64u go silent; the log is the only hint
+	if ( ! passwordLogged || password != c64uPassword )
+	{
+		if ( password.isEmpty () )
+			Z_INFO ( "no password set" );
+		else
+			Z_INFO ( "using password for http" );
+
+		passwordLogged = true;
+	}
+
 	c64uPassword = password;
 }
 //-----------------------------------------------------------------------------
