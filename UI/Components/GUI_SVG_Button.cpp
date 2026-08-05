@@ -8,7 +8,7 @@ GUI_SVG_Button::GUI_SVG_Button ( const juce::String& buttonName, const juce::Str
 {
 	svgNames = _svgNames;
 
-	enablementChanged ();
+	GUI_SVG_Button::enablementChanged ();
 }
 //-----------------------------------------------------------------------------
 
