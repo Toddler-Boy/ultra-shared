@@ -15,7 +15,7 @@ GUI_SearchBar::GUI_SearchBar ()
 
 	textEditor.disableClickOnlyFocus ();
 	textEditor.addListener ( this );
-	textEditor.onGetScreenBounds = [ this ]	{	return getScreenBounds ();	};
+	textEditor.onGetScreenBounds = [ this ] {	return getScreenBounds ();	};
 	lookAndFeelChanged ();
 
 	textEditor.setColour ( juce::TextEditor::outlineColourId, juce::Colours::transparentBlack );
@@ -23,8 +23,10 @@ GUI_SearchBar::GUI_SearchBar ()
 
 	addAndMakeVisible ( textEditor );
 
-	clearSearch.margin = 4.0f;
-	clearSearch.alpha[ 0 ] = 0.5f;
+	clearSearch.margin = 6.0f;
+	clearSearch.colId = UI::colors::window;
+	clearSearch.bckAlpha[ 0 ] = 0.3f;
+	clearSearch.bckAlpha[ 1 ] = 0.6f;
 	clearSearch.useOrgSize = false;
 	clearSearch.setWantsKeyboardFocus ( false );
 
@@ -49,7 +51,11 @@ void GUI_SearchBar::resized ()
 		b.removeFromLeft ( h );
 
 		// Place clear button at the end
-		clearSearch.setBounds ( b.removeFromRight ( h ).reduced ( 0, 5 ) );
+		{
+			const auto	slot = b.removeFromRight ( h );
+			const auto	sq = std::min ( 20, slot.getHeight () - 10 );
+			clearSearch.setBounds ( slot.withSizeKeepingCentre ( sq, sq ) );
+		}
 
 		// Place text-editor
 		textEditor.setBounds ( b.withSizeKeepingCentre ( b.getWidth (), b.getHeight () - 4  ).translated ( 0, -2 ) );
