@@ -24,10 +24,15 @@ void GUI_VIC2_Palette::paint ( juce::Graphics& g )
 	auto	b = getLocalBounds ().toFloat ().expanded ( 0.0f, 1.0f );
 	const auto	w = b.getWidth () / palette.size ();
 
-	for ( const auto& col : palette )
+	for ( auto index = 0; const auto& col : palette )
 	{
+		auto	r = b.removeFromLeft ( w ).withWidth ( w + 1.0f );
+
+		if ( index++ == 0 )
+			r.setLeft ( -1.0f );
+
 		g.setColour ( col );
-		g.fillRect ( b.removeFromLeft ( w ).withWidth ( w + 1.0f ) );
+		g.fillRect ( r );
 	}
 }
 //-----------------------------------------------------------------------------
