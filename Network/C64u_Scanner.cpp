@@ -25,6 +25,23 @@ void C64uScanner::scan ( ScannerCallback _callback, juce::String& _lastIP )
 }
 //-----------------------------------------------------------------------------
 
+juce::String C64uScanner::localAddressFor ( const juce::String& peerIP )
+{
+	const juce::IPAddress	peer ( peerIP );
+
+	for ( const auto& addr : juce::IPAddress::getAllAddresses () )
+	{
+		if ( addr.isIPv6 )
+			continue;
+
+		if ( addr.address[ 0 ] == peer.address[ 0 ] && addr.address[ 1 ] == peer.address[ 1 ] && addr.address[ 2 ] == peer.address[ 2 ] )
+			return addr.toString ();
+	}
+
+	return {};
+}
+//-----------------------------------------------------------------------------
+
 void C64uScanner::run ()
 {
 	Z_LOG ( "C64uScanner started" );
