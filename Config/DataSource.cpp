@@ -12,7 +12,8 @@ namespace
 		bool		pak = false;
 		bool		valid = false;
 		PakFile		pakFile;
-		juce::File	folder;		// The naked data root, or the pak's parent
+		juce::File	folder;			// The naked data root, or the pak's parent
+		juce::File	sharedFolder;	// The ultra-shared Data fallback root, naked mode only
 	};
 	//-----------------------------------------------------------------------------
 
@@ -196,6 +197,11 @@ namespace
 		State	s;
 
 		s.folder = folder;
+
+		#ifdef ULTRA_SHARED_DATA_DIR
+			s.sharedFolder = juce::File ( ULTRA_SHARED_DATA_DIR );
+		#endif
+
 		s.valid = filepaths::hasDataContent ( folder );
 
 		return s;
@@ -258,9 +264,23 @@ namespace
 	}
 	//-----------------------------------------------------------------------------
 
+	// The app tree wins; the ultra-shared Data tree only serves what the app
+	// doesn't have (missing paths resolve to the app tree, so new files are
+	// created there)
 	[[ nodiscard ]] juce::File nakedFile ( const juce::String& path )
 	{
-		return path.isEmpty () ? state ().folder : state ().folder.getChildFile ( path );
+		const auto&	s = state ();
+
+		if ( path.isEmpty () )
+			return s.folder;
+
+		const auto	f = s.folder.getChildFile ( path );
+
+		if ( ! f.exists () && s.sharedFolder != juce::File () )
+			if ( const auto shared = s.sharedFolder.getChildFile ( path ); shared.exists () )
+				return shared;
+
+		return f;
 	}
 }
 //-----------------------------------------------------------------------------
@@ -283,6 +303,9 @@ juce::String datasource::describe ()
 
 	if ( s.pak )
 		return s.pakFile.getFile ().getFullPathName () + " (" + juce::String ( s.pakFile.getNumEntries () ) + " entries)";
+
+	if ( s.sharedFolder != juce::File () )
+		return s.folder.getFullPathName () + " + " + s.sharedFolder.getFullPathName ();
 
 	return s.folder.getFullPathName ();
 }
@@ -356,12 +379,22 @@ juce::StringArray datasource::listFiles ( const juce::String& prefix, const bool
 	if ( s.pak )
 		return s.pakFile.listFiles ( prefix, recursive, wildcard );
 
-	const auto	root = nakedFile ( prefix );
-	const auto	files = root.findChildFiles ( juce::File::findFiles | juce::File::ignoreHiddenFiles, recursive, wildcard.isEmpty () ? "*" : wildcard );
+	auto listFrom = [ & ] ( const juce::File& root )
+	{
+		juce::StringArray	ret;
+		for ( const auto& f : root.findChildFiles ( juce::File::findFiles | juce::File::ignoreHiddenFiles, recursive, wildcard.isEmpty () ? "*" : wildcard ) )
+			ret.add ( f.getRelativePathFrom ( root ).replaceCharacter ( '\\', '/' ) );
 
-	juce::StringArray	ret;
-	for ( const auto& f : files )
-		ret.add ( f.getRelativePathFrom ( root ).replaceCharacter ( '\\', '/' ) );
+		return ret;
+	};
+
+	auto	ret = listFrom ( s.folder.getChildFile ( prefix ) );
+
+	// Shared-tree entries the app tree doesn't shadow merge in, matching the
+	// combined pak
+	if ( s.sharedFolder != juce::File () )
+		for ( const auto& name : listFrom ( s.sharedFolder.getChildFile ( prefix ) ) )
+			ret.addIfNotAlreadyThere ( name, true );
 
 	return ret;
 }
@@ -374,11 +407,20 @@ juce::StringArray datasource::listFolders ( const juce::String& prefix )
 	if ( s.pak )
 		return s.pakFile.listFolders ( prefix );
 
-	const auto	folders = nakedFile ( prefix ).findChildFiles ( juce::File::findDirectories | juce::File::ignoreHiddenFiles, false, "*" );
+	auto listFrom = [ & ] ( const juce::File& root )
+	{
+		juce::StringArray	ret;
+		for ( const auto& f : root.findChildFiles ( juce::File::findDirectories | juce::File::ignoreHiddenFiles, false, "*" ) )
+			ret.add ( f.getFileName () );
 
-	juce::StringArray	ret;
-	for ( const auto& f : folders )
-		ret.add ( f.getFileName () );
+		return ret;
+	};
+
+	auto	ret = listFrom ( s.folder.getChildFile ( prefix ) );
+
+	if ( s.sharedFolder != juce::File () )
+		for ( const auto& name : listFrom ( s.sharedFolder.getChildFile ( prefix ) ) )
+			ret.addIfNotAlreadyThere ( name, true );
 
 	return ret;
 }
@@ -409,6 +451,12 @@ juce::File datasource::getDevFile ( const juce::String& path )
 	}
 
 	return nakedFile ( path );
+}
+//-----------------------------------------------------------------------------
+
+juce::File datasource::getSharedDevRoot ()
+{
+	return state ().sharedFolder;
 }
 //-----------------------------------------------------------------------------
 

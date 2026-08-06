@@ -6,8 +6,10 @@
 
 // All factory data comes through here. The backing store is fixed per config:
 // Release reads Data.pak (the only layout users get), Debug and Development
-// read the repo Data folder baked in as ULTRA_DATA_DIR; consumers only ever
-// see data-relative paths.
+// read the repo Data folder baked in as ULTRA_DATA_DIR, with the ultra-shared
+// submodule's own Data tree (ULTRA_SHARED_DATA_DIR) as fallback root for the
+// shared UI data; the app tree wins a name clash. The pak packs both trees, so
+// consumers only ever see data-relative paths either way.
 //
 // The lime shader stack reads its CRT data through lime::content, installed
 // in pak mode to route the nominal files under getCRTRoot () into the pak.
@@ -46,9 +48,15 @@ namespace datasource
 	void loadBytes ( const char* fileName, std::vector<uint8_t>& bufferRef );
 
 	// The real file behind a path, for developer tooling that writes factory
-	// data and for the factory folder watcher. In pak mode there is no such
-	// file: Z_ERR and an invalid File
+	// data and for the factory folder watcher. Paths the app tree doesn't have
+	// resolve to the shared fallback root, so editors and watchers land on the
+	// submodule master, not a copy. In pak mode there is no such file: Z_ERR
+	// and an invalid File
 	[[ nodiscard ]] juce::File getDevFile ( const juce::String& path = {} );
+
+	// The ultra-shared Data tree, for watchers that cover both naked roots;
+	// invalid in pak mode
+	[[ nodiscard ]] juce::File getSharedDevRoot ();
 
 	// The user's explicit $USER$ picks from the CRT drop-downs: when factory
 	// and user content share a name, the lime content loader serves the user
