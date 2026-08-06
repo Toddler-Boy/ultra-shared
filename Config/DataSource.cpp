@@ -10,7 +10,6 @@ namespace
 	struct State
 	{
 		bool		pak = false;
-		bool		valid = false;
 		PakFile		pakFile;
 		juce::File	folder;			// The naked data root, or the pak's parent
 		juce::File	sharedFolder;	// The ultra-shared Data fallback root, naked mode only
@@ -45,8 +44,7 @@ namespace
 
 		s.pak = true;
 		s.folder = pakFile.getParentDirectory ();
-		s.valid = s.pakFile.open ( pakFile )
-			   && ! s.pakFile.listFiles ( "CRTEmulation/Shaders/", true ).isEmpty ();
+		s.pakFile.open ( pakFile );
 
 		return s;
 	}
@@ -202,8 +200,6 @@ namespace
 			s.sharedFolder = juce::File ( ULTRA_SHARED_DATA_DIR );
 		#endif
 
-		s.valid = filepaths::hasDataContent ( folder );
-
 		return s;
 	}
 	//-----------------------------------------------------------------------------
@@ -254,7 +250,7 @@ namespace
 		{
 			auto	st = resolve ();
 
-			if ( st.pak && st.valid )
+			if ( st.pak && st.pakFile.isValid () )
 				installLimeContentLoader ( st.folder );
 
 			return st;
@@ -288,12 +284,6 @@ namespace
 bool datasource::isPak ()
 {
 	return state ().pak;
-}
-//-----------------------------------------------------------------------------
-
-bool datasource::isValid ()
-{
-	return state ().valid;
 }
 //-----------------------------------------------------------------------------
 

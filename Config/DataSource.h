@@ -20,10 +20,6 @@ namespace datasource
 	// for local pak testing. Debug/Development: never a pak
 	[[ nodiscard ]] bool isPak ();
 
-	// Pak: the central directory parses and holds the CRT shaders.
-	// Naked: the folder passes the content spot-check
-	[[ nodiscard ]] bool isValid ();
-
 	// The pak file or naked folder in use, for the startup log
 	[[ nodiscard ]] juce::String describe ();
 
