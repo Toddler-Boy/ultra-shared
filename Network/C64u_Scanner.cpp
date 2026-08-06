@@ -25,6 +25,23 @@ void C64uScanner::scan ( ScannerCallback _callback, juce::String& _lastIP )
 }
 //-----------------------------------------------------------------------------
 
+juce::String C64uScanner::localAddressFor ( const juce::String& peerIP )
+{
+	const juce::IPAddress	peer ( peerIP );
+
+	for ( const auto& addr : juce::IPAddress::getAllAddresses () )
+	{
+		if ( addr.isIPv6 )
+			continue;
+
+		if ( addr.address[ 0 ] == peer.address[ 0 ] && addr.address[ 1 ] == peer.address[ 1 ] && addr.address[ 2 ] == peer.address[ 2 ] )
+			return addr.toString ();
+	}
+
+	return {};
+}
+//-----------------------------------------------------------------------------
+
 void C64uScanner::run ()
 {
 	Z_LOG ( "C64uScanner started" );
@@ -162,8 +179,29 @@ juce::String C64uScanner::isActualC64u ( juce::StreamingSocket& socket )
 {
 	socket.write ( request.toRawUTF8 (), request.length () );
 
+	// Sliced reads with a hard budget: a stranger keeping the connection open
+	// would park a blocking read (and app shutdown behind it) on ITS timeout;
+	// the C64u answers and closes within the first slices
 	char	buffer[ 1024 ];
-	if ( auto numBytes = socket.read ( buffer, sizeof ( buffer ) - 1, true ); numBytes > 0 )
+	auto	numBytes = 0;
+
+	for ( auto budget = 10; --budget >= 0 && numBytes < int ( sizeof ( buffer ) - 1 ) && ! threadShouldExit (); )
+	{
+		const auto	ready = socket.waitUntilReady ( true, 50 );
+		if ( ready < 0 )
+			break;
+
+		if ( ready == 0 )
+			continue;
+
+		const auto	bytesRead = socket.read ( buffer + numBytes, int ( sizeof ( buffer ) - 1 ) - numBytes, false );
+		if ( bytesRead <= 0 )
+			break;
+
+		numBytes += bytesRead;
+	}
+
+	if ( numBytes > 0 )
 	{
 		buffer[ numBytes ] = 0;
 		const juce::String    response ( buffer );

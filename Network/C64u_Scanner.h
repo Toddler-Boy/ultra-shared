@@ -16,6 +16,10 @@ public:
 
 	void scan ( ScannerCallback _callback, juce::String& _lastIP );
 
+	// Local adapter address on the same /24 as the given LAN peer, empty when
+	// no adapter matches
+	[[ nodiscard ]] static juce::String localAddressFor ( const juce::String& peerIP );
+
 private:
 	void run () override;
 

@@ -154,4 +154,12 @@ SignatureState verifyExecutableSignature ()
 }
 //-----------------------------------------------------------------------------
 
+bool firewallBlocksThisApp ()
+{
+	// The application firewall keys on the signature and prompts once; there
+	// is no lasting cancel trap to detect
+	return false;
+}
+//-----------------------------------------------------------------------------
+
 #endif

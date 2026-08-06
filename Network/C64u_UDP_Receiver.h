@@ -28,6 +28,9 @@ public:
 	[[ nodiscard ]] juce::String start ( const juce::String& address );
 	void stop ();
 
+	// Running but silent: no data yet, or the flow dried up
+	[[ nodiscard ]] bool isStalled () const { return isThreadRunning () && hasTimedOut; }
+
 	// UI Callbacks
 	std::function<void ( int finishedBufferIndex, bool isNTSC )> onVideoFrame;
 	std::function<void ( int finishedBufferIndex )> onAudioChunk;

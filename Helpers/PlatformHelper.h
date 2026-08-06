@@ -38,4 +38,9 @@ struct NumberGrouping
 enum class SignatureState { notSigned, valid, corrupted };
 
 [[ nodiscard ]] SignatureState verifyExecutableSignature ();
+
+// Windows only: an enabled inbound block rule pinned to this exe, the lasting
+// mark of a cancelled firewall prompt. No admin rights needed to ask. Other
+// platforms (and a failed query) report false
+[[ nodiscard ]] bool firewallBlocksThisApp ();
 //-----------------------------------------------------------------------------

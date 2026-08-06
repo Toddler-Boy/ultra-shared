@@ -8,8 +8,14 @@
 #include <SoftPub.h>
 #include <WinTrust.h>
 
-// Keeps the dependency inside this file, no build-file entry in either app
+#include <netfw.h>
+#include <objbase.h>
+#include <oleauto.h>
+
+// Keeps the dependencies inside this file, no build-file entries in either app
 #pragma comment ( lib, "wintrust" )
+#pragma comment ( lib, "ole32" )
+#pragma comment ( lib, "oleaut32" )
 
 // Both apps render the GL CRT stack: ask switchable-graphics machines for
 // the discrete GPU
@@ -140,6 +146,80 @@ SignatureState verifyExecutableSignature ()
 	// signature blob that no longer parses (STATUS_INVALID_SIGNATURE), means
 	// the file changed after signing
 	return SignatureState::corrupted;
+}
+//-----------------------------------------------------------------------------
+
+bool firewallBlocksThisApp ()
+{
+	wchar_t	path[ MAX_PATH ] = {};
+	if ( ! GetModuleFileNameW ( nullptr, path, MAX_PATH ) )
+		return false;
+
+	// The message thread carries JUCE's COM apartment already; only balance
+	// an initialization this call added itself
+	const auto	coInit = CoInitializeEx ( nullptr, COINIT_APARTMENTTHREADED );
+
+	auto	blocked = false;
+
+	INetFwPolicy2*	policy = nullptr;
+	if ( SUCCEEDED ( CoCreateInstance ( __uuidof ( NetFwPolicy2 ), nullptr, CLSCTX_INPROC_SERVER, __uuidof ( INetFwPolicy2 ), reinterpret_cast<void**> ( &policy ) ) ) && policy )
+	{
+		INetFwRules*	rules = nullptr;
+		if ( SUCCEEDED ( policy->get_Rules ( &rules ) ) && rules )
+		{
+			IUnknown*	enumUnknown = nullptr;
+			if ( SUCCEEDED ( rules->get__NewEnum ( &enumUnknown ) ) && enumUnknown )
+			{
+				IEnumVARIANT*	enumerator = nullptr;
+				if ( SUCCEEDED ( enumUnknown->QueryInterface ( IID_PPV_ARGS ( &enumerator ) ) ) && enumerator )
+				{
+					VARIANT	item;
+					VariantInit ( &item );
+
+					while ( ! blocked && enumerator->Next ( 1, &item, nullptr ) == S_OK )
+					{
+						INetFwRule*	rule = nullptr;
+						if ( item.vt == VT_DISPATCH && item.pdispVal && SUCCEEDED ( item.pdispVal->QueryInterface ( IID_PPV_ARGS ( &rule ) ) ) && rule )
+						{
+							NET_FW_RULE_DIRECTION	direction = NET_FW_RULE_DIR_MAX;
+							NET_FW_ACTION			action = NET_FW_ACTION_MAX;
+							VARIANT_BOOL			enabled = VARIANT_FALSE;
+							BSTR					application = nullptr;
+
+							rule->get_Direction ( &direction );
+							rule->get_Action ( &action );
+							rule->get_Enabled ( &enabled );
+							rule->get_ApplicationName ( &application );
+
+							if (	direction == NET_FW_RULE_DIR_IN && action == NET_FW_ACTION_BLOCK
+								&&	enabled == VARIANT_TRUE && application && _wcsicmp ( application, path ) == 0 )
+								blocked = true;
+
+							if ( application )
+								SysFreeString ( application );
+
+							rule->Release ();
+						}
+
+						VariantClear ( &item );
+					}
+
+					enumerator->Release ();
+				}
+
+				enumUnknown->Release ();
+			}
+
+			rules->Release ();
+		}
+
+		policy->Release ();
+	}
+
+	if ( coInit == S_OK || coInit == S_FALSE )
+		CoUninitialize ();
+
+	return blocked;
 }
 //-----------------------------------------------------------------------------
 
