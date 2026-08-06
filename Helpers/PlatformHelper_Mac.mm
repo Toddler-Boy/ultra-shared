@@ -145,4 +145,13 @@ NumberGrouping userNumberGrouping ()
 
 	return g;
 }
+//-----------------------------------------------------------------------------
+
+SignatureState verifyExecutableSignature ()
+{
+	// codesign already refuses to launch a modified bundle
+	return SignatureState::notSigned;
+}
+//-----------------------------------------------------------------------------
+
 #endif

@@ -27,4 +27,10 @@ void bringWindowToForeground ( void* )
 }
 //-----------------------------------------------------------------------------
 
+SignatureState verifyExecutableSignature ()
+{
+	return SignatureState::notSigned;
+}
+//-----------------------------------------------------------------------------
+
 #endif

@@ -30,4 +30,12 @@ struct NumberGrouping
 };
 
 [[ nodiscard ]] NumberGrouping userNumberGrouping ();
+
+// Authenticode self-check, Windows only: the signature seals the exe and its
+// appended pak in one hash, so corrupted means shipped bytes changed. Dev
+// builds and the other platforms report notSigned (macOS enforces its own
+// signature at launch)
+enum class SignatureState { notSigned, valid, corrupted };
+
+[[ nodiscard ]] SignatureState verifyExecutableSignature ();
 //-----------------------------------------------------------------------------
