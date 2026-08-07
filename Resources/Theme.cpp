@@ -203,14 +203,59 @@ void Theme::load ( const juce::String& name )
 		}
 	}
 
-	// Apply colors
+	// Collect the palette (themed value or code default) and apply it through
+	// the user's color adjustments
+	rawColors.clear ();
+
+	for ( const auto& [ colName, idDef ] : colorDefinitions )
+		rawColors.emplace_back ( idDef.first, themeMap.contains ( colName ) ? themeMap[ colName ] : idDef.second );
+
+	applyColors ();
+}
+//-----------------------------------------------------------------------------
+
+void Theme::setColorAdjustments ( const ColorAdjustments& adj )
+{
+	adjustments = adj;
+	applyColors ();
+}
+//-----------------------------------------------------------------------------
+
+void Theme::applyColors ()
+{
+	if ( ! laf )
+		return;
+
+	for ( const auto& [ id, col ] : rawColors )
+		laf->setColour ( id, adjust ( col, adjustments ) );
+}
+//-----------------------------------------------------------------------------
+
+juce::Colour Theme::adjust ( const juce::Colour col, const ColorAdjustments& adj )
+{
+	if ( adj.isNeutral () )
+		return col;
+
+	auto channel = [ &adj ] ( float c )
 	{
-		for ( const auto& [ colName, idDef ] : colorDefinitions )
-			if ( themeMap.contains ( colName ) )
-				laf->setColour ( idDef.first, themeMap[ colName ] );
-			else
-				laf->setColour ( idDef.first, idDef.second );
-	}
+		c = std::pow ( std::max ( c, 0.0f ), adj.gamma );
+		c = ( c - 0.5f ) * adj.contrast + 0.5f;
+
+		return c * adj.brightness;
+	};
+
+	auto	r = channel ( col.getFloatRed () );
+	auto	g = channel ( col.getFloatGreen () );
+	auto	b = channel ( col.getFloatBlue () );
+
+	// Saturation scales the channels around the perceived luma
+	const auto	luma = 0.2126f * r + 0.7152f * g + 0.0722f * b;
+
+	r = std::clamp ( luma + ( r - luma ) * adj.saturation, 0.0f, 1.0f );
+	g = std::clamp ( luma + ( g - luma ) * adj.saturation, 0.0f, 1.0f );
+	b = std::clamp ( luma + ( b - luma ) * adj.saturation, 0.0f, 1.0f );
+
+	return juce::Colour::fromFloatRGBA ( r, g, b, col.getFloatAlpha () );
 }
 //-----------------------------------------------------------------------------
 

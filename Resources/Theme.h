@@ -23,6 +23,31 @@ public:
 	// defaults in place. This needs a target juce::LookAndFeel to work
 	void load ( const juce::String& name );
 
+	// User-side color grading, applied on top of whatever theme is loaded.
+	// All 1.0 = the theme's colors bit-identical
+	struct ColorAdjustments
+	{
+		float	gamma = 1.0f;
+		float	brightness = 1.0f;
+		float	contrast = 1.0f;
+		float	saturation = 1.0f;
+
+		[[ nodiscard ]] bool isNeutral () const
+		{
+			return	   juce::approximatelyEqual ( gamma, 1.0f )
+					&& juce::approximatelyEqual ( brightness, 1.0f )
+					&& juce::approximatelyEqual ( contrast, 1.0f )
+					&& juce::approximatelyEqual ( saturation, 1.0f );
+		}
+	};
+
+	// Stores the adjustments and re-applies the loaded colors through them;
+	// the caller refreshes whatever it derives from the palette afterwards
+	void setColorAdjustments ( const ColorAdjustments& adj );
+
+	// A copy of the color with the adjustments applied
+	[[ nodiscard ]] static juce::Colour adjust ( const juce::Colour col, const ColorAdjustments& adj );
+
 	void setUserRoot ( const juce::File& _userRoot );
 
 	// Maps a marked theme name ("$DATA$/default", "$USER$/neon") to its yml
@@ -46,6 +71,13 @@ private:
 	// the first theme load, and load () runs it so a theme switch never
 	// inherits values from the previous file
 	void resetDefaults ();
+
+	// The loaded, untransformed palette (colourId to color); applyColors runs
+	// it through the adjustments into the LookAndFeel
+	void applyColors ();
+
+	std::vector<std::pair<int, juce::Colour>>	rawColors;
+	ColorAdjustments							adjustments;
 
 	std::array<float, static_cast<size_t> ( UI::corners::count )>				cornerRadius;
 	std::array<float, static_cast<size_t> ( UI::lines::count )>					lineWidths;
