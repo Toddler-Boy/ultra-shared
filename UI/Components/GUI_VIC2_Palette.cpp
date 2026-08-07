@@ -2,7 +2,7 @@
 
 #include "ultra-shared/Video/colodore.h"
 
-#include "Config/FilePaths.h"
+#include "ultra-shared/Config/BuildInfo.h"
 #include "Helpers/Messages.h"
 #include "ultra-shared/UI/UI_Helpers.h"
 
@@ -14,7 +14,7 @@ GUI_VIC2_Palette::GUI_VIC2_Palette ()
 
 	setSettings ( 0, 50.0f, 100.0f, 50.0f, false );
 
-	const auto	allowMouseClicks = filepaths::isDeveloperMode ();
+	const auto	allowMouseClicks = buildinfo::isDeveloperMode ();
 	setInterceptsMouseClicks ( allowMouseClicks, allowMouseClicks );
 }
 //-----------------------------------------------------------------------------
