@@ -40,6 +40,15 @@ bool NetworkHardwareChecker::isWiredAndActive ( const juce::IPAddress& addr ) co
 }
 //-----------------------------------------------------------------------------
 
+bool NetworkHardwareChecker::isActive ( const juce::IPAddress& addr ) const
+{
+	if ( ! interfaceMap.contains ( addr ) )
+		return false;
+
+	return interfaceMap.at ( addr ).isActive;
+}
+//-----------------------------------------------------------------------------
+
 void NetworkHardwareChecker::createMap ()
 {
 	#if JUCE_WINDOWS

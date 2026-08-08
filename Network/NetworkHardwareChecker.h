@@ -8,6 +8,7 @@ public:
 	NetworkHardwareChecker ();
 
 	[[ nodiscard ]] bool isWiredAndActive ( const juce::IPAddress& addr ) const;
+	[[ nodiscard ]] bool isActive ( const juce::IPAddress& addr ) const;
 
 private:
 	struct InterfaceInfo
