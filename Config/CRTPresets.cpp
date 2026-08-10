@@ -3,6 +3,7 @@
 #include "ultra-shared/Config/CRTPresets.h"
 
 #include "ultra-shared/Config/DataSource.h"
+#include "ultra-shared/Helpers/FileUtils.h"
 #include "Config/FilePaths.h"
 
 //-----------------------------------------------------------------------------
@@ -207,11 +208,8 @@ juce::String crtpresets::saveCurrentValues ( const Preferences& preferences, con
 		out += "  " + juce::String ( s.key ) + ": " + str + "\n";
 	}
 
-	if ( ! file.replaceWithText ( out ) )
-	{
-		Z_ERR ( "Could not save CRT preset " << file.getFullPathName () );
+	if ( ! fileutils::replaceFile ( file, out ) )
 		return {};
-	}
 
 	return filepaths::markerFor ( savesToFactory () ? filepaths::root::data : filepaths::root::user ) + "/" + name;
 }

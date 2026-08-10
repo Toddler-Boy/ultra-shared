@@ -5,6 +5,8 @@
 #include <algorithm>
 #include <variant>
 
+#include "ultra-shared/Helpers/FileUtils.h"
+
 //-----------------------------------------------------------------------------
 
 // Yaml-backed key/value store.
@@ -143,11 +145,8 @@ public:
 			out += "  " + key + ": " + str + "\n";
 		}
 
-		if ( ! file.replaceWithText ( out ) )
-		{
-			Z_ERR ( "Could not save " << file.getFullPathName () );
+		if ( ! fileutils::replaceFile ( file, out ) )
 			return;
-		}
 
 		dirty = false;
 	}
