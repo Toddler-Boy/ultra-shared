@@ -76,8 +76,8 @@ void C64uScanner::run ()
 		if ( ! isPrivate )
 			return true;
 
-		// Then check if it's currently wired and active
-		return ! hardware.isWiredAndActive ( addr );
+		// Then drop adapters that are down; wireless ones receive just fine
+		return ! hardware.isActive ( addr );
 	} );
 
 	// Sort descending, so that 192.168.x.x is scanned first, as it's the most common private network range
