@@ -30,6 +30,9 @@ GUI_SettingsChoice::GUI_SettingsChoice ( const juce::String& setSection, const j
 		preferences->set ( settingSection + "/" + settingName, options[ id - 1 ] );
 
 		msg::SettingChanged { settingSection, settingName }.send ();
+
+		if ( onChanged )
+			onChanged ();
 	};
 
 	addAndMakeVisible ( label );

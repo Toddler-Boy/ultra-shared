@@ -23,6 +23,9 @@ public:
 	// this
 	void restorePreference ();
 
+	// Fires after a pick has been stored, for siblings that display it
+	std::function<void ()>	onChanged;
+
 private:
 	gin::LayoutSupport	layout { *this };
 

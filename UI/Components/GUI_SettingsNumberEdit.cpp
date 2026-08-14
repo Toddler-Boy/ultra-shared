@@ -32,7 +32,7 @@ GUI_SettingsNumberEdit::GUI_SettingsNumberEdit ( const juce::String& setSection,
 	const auto	maxLength = juce::String ( range.max ).length () + ( isFloat ? 2 : 0 );
 	number.setInputRestrictions ( maxLength, isFloat ? "0123456789." : "0123456789" );
 
-	number.applyFontToAllText ( UI::font ( UI::fonts::settings_entry ), true );
+	number.applyFontToAllText ( UI::font ( UI::fonts::settings_field ), true );
 	number.setJustification ( juce::Justification::centred );
 	number.setIndents ( 4, 0 );
 	number.setBorder ( {} );
@@ -99,7 +99,7 @@ void GUI_SettingsNumberEdit::lookAndFeelChanged ()
 {
 	const auto	txtCol = UI::getShade ( 1.0f );
 
-	number.applyFontToAllText ( UI::font ( UI::fonts::settings_entry ), true );
+	number.applyFontToAllText ( UI::font ( UI::fonts::settings_field ), true );
 
 	number.setColour ( juce::TextEditor::backgroundColourId, UI::getShade ( 0.2f ) );
 	number.setColour ( juce::TextEditor::textColourId, txtCol );
