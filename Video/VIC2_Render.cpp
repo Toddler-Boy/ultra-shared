@@ -1,5 +1,6 @@
 #include <JuceHeader.h>
 
+#include <bit>
 #include <numbers>
 
 #include "ultra-shared/Config/DataSource.h"
@@ -149,22 +150,61 @@ bool VIC2_Render::convertTrueColor ( const char* filename, const uint32_t* rawDa
 			return pow2 ( imgR, refR, 0.299f ) + pow2 ( imgG, refG, 0.587f ) + pow2 ( imgB, refB, 0.114f );
 		};
 
-		std::unordered_map<uint32_t, uint8_t>	mapped;
-		for ( const auto col1 : imgPalette )
-		{
-			auto	bestDistance = INT_MAX;
-			auto	bestIndex = -1;
+		// Distinct source colors mean distinct hardware indices, so pick the one-to-one
+		// assignment with the smallest total distance over all colors
+		const auto	numColors = int ( imgPalette.size () );
+		const auto	numIndices = int ( refPalette.size () );
 
-			for ( auto index = 0; const auto col2 : refPalette )
+		std::array<std::array<int, 16>, 16>	cost {};
+		for ( auto pos = 0; pos < numColors; ++pos )
+			for ( auto index = 0; index < numIndices; ++index )
+				cost[ pos ][ index ] = distanceRGB ( imgPalette[ pos ], refPalette[ index ] );
+
+		// dp[mask] = cheapest assignment of the first popcount(mask) colors to exactly the indices in mask;
+		// masks only grow, so ascending order finalizes each entry before it is extended
+		std::vector<int>		dp ( size_t ( 1 ) << numIndices, INT_MAX );
+		std::vector<uint8_t>	lastIndex ( size_t ( 1 ) << numIndices, 0 );
+
+		dp[ 0 ] = 0;
+		for ( auto mask = 0; mask < int ( dp.size () ); ++mask )
+		{
+			if ( dp[ mask ] == INT_MAX )
+				continue;
+
+			const auto	pos = std::popcount ( unsigned ( mask ) );
+			if ( pos >= numColors )
+				continue;
+
+			for ( auto index = 0; index < numIndices; ++index )
 			{
-				if ( auto dist = distanceRGB ( col1, col2 ); dist < bestDistance )
+				if ( mask & ( 1 << index ) )
+					continue;
+
+				const auto	next = mask | ( 1 << index );
+				if ( const auto total = dp[ mask ] + cost[ pos ][ index ]; total < dp[ next ] )
 				{
-					bestDistance = dist;
-					bestIndex = index;
+					dp[ next ] = total;
+					lastIndex[ next ] = uint8_t ( index );
 				}
-				++index;
 			}
-			mapped[ col1 ] = uint8_t ( bestIndex );
+		}
+
+		// Cheapest complete assignment, then walk it backwards to recover each color's index
+		auto	bestMask = 0;
+		auto	bestTotal = INT_MAX;
+		for ( auto mask = 0; mask < int ( dp.size () ); ++mask )
+			if ( std::popcount ( unsigned ( mask ) ) == numColors && dp[ mask ] < bestTotal )
+			{
+				bestTotal = dp[ mask ];
+				bestMask = mask;
+			}
+
+		std::unordered_map<uint32_t, uint8_t>	mapped;
+		for ( auto mask = bestMask; mask; )
+		{
+			const auto	index = lastIndex[ mask ];
+			mapped[ imgPalette[ size_t ( std::popcount ( unsigned ( mask ) ) - 1 ) ] ] = index;
+			mask &= ~( 1 << index );
 		}
 		return mapped;
 	};
