@@ -29,5 +29,9 @@ namespace pngloader
 	};
 
 	[[ nodiscard ]] image decode ( const void* data, const size_t size );
+
+	// Encode back to a PNG stream, palette form when the image is paletted,
+	// otherwise 32-bit RGBA. Deliberately plain, oxipng optimizes afterwards
+	[[ nodiscard ]] std::vector<uint8_t> encode ( const image& img );
 }
 //-----------------------------------------------------------------------------

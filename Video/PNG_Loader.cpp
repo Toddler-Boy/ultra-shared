@@ -1,5 +1,6 @@
 #include <JuceHeader.h>
 
+#include <array>
 #include <csetjmp>
 #include <cstring>
 
@@ -42,6 +43,14 @@ namespace
 	}
 
 	void warningCallback ( png_structp, png_const_charp ) {}
+
+	void writeCallback ( png_structp png, png_bytep data, png_size_t length )
+	{
+		auto&	out = *static_cast<std::vector<uint8_t>*> ( png_get_io_ptr ( png ) );
+		out.insert ( out.end (), data, data + length );
+	}
+
+	void flushCallback ( png_structp ) {}
 }
 //-----------------------------------------------------------------------------
 
@@ -148,6 +157,79 @@ pngloader::image pngloader::decode ( const void* data, const size_t size )
 	}
 
 	png_destroy_read_struct ( &png, &info, nullptr );
+
+	if ( ! ok )
+		return {};
+
+	return out;
+}
+//-----------------------------------------------------------------------------
+
+std::vector<uint8_t> pngloader::encode ( const image& img )
+{
+	if ( ! img.isValid () )
+		return {};
+
+	auto	png = png_create_write_struct ( PNG_LIBPNG_VER_STRING, nullptr, errorCallback, warningCallback );
+	if ( png == nullptr )
+		return {};
+
+	auto	info = png_create_info_struct ( png );
+	if ( info == nullptr )
+	{
+		png_destroy_write_struct ( &png, nullptr );
+		return {};
+	}
+
+	std::vector<uint8_t>		out;
+	std::vector<png_bytep>		rows ( size_t ( img.height ) );
+	std::array<png_color, 256>	pal {};
+
+	volatile auto	ok = false;
+
+	// libpng reports errors via longjmp, landing back here with a nonzero code
+	if ( setjmp ( png_jmpbuf ( png ) ) == 0 )
+	{
+		png_set_write_fn ( png, &out, writeCallback, flushCallback );
+
+		png_set_IHDR ( png, info, png_uint_32 ( img.width ), png_uint_32 ( img.height ), 8,
+					   img.paletted ? PNG_COLOR_TYPE_PALETTE : PNG_COLOR_TYPE_RGB_ALPHA,
+					   PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT );
+
+		if ( img.paletted )
+		{
+			for ( size_t i = 0; i < img.palette.size (); ++i )
+			{
+				pal[ i ].red	= uint8_t ( img.palette[ i ] >> 16 );
+				pal[ i ].green	= uint8_t ( img.palette[ i ] >> 8 );
+				pal[ i ].blue	= uint8_t ( img.palette[ i ] );
+			}
+			png_set_PLTE ( png, info, pal.data (), int ( img.palette.size () ) );
+		}
+
+		png_write_info ( png, info );
+
+		if ( img.paletted )
+		{
+			for ( auto y = 0; y < img.height; ++y )
+				rows[ y ] = (png_bytep)( img.indices.data () + size_t ( y ) * img.width );
+		}
+		else
+		{
+			// Pixels are 0xAARRGGBB in memory
+			png_set_bgr ( png );
+
+			for ( auto y = 0; y < img.height; ++y )
+				rows[ y ] = (png_bytep)( img.pixels.data () + size_t ( y ) * img.width );
+		}
+
+		png_write_image ( png, rows.data () );
+		png_write_end ( png, info );
+
+		ok = true;
+	}
+
+	png_destroy_write_struct ( &png, &info );
 
 	if ( ! ok )
 		return {};
