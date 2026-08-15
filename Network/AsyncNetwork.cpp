@@ -13,6 +13,14 @@ AsyncNetwork::~AsyncNetwork ()
 {
 	signalThreadShouldExit ();
 	wakeUp.signal ();
+
+	{
+		const juce::ScopedLock	sl ( streamLock );
+
+		if ( activeStream )
+			activeStream->cancel ();
+	}
+
 	waitForThreadToExit ( 5000 );
 }
 //-----------------------------------------------------------------------------
@@ -91,18 +99,23 @@ void AsyncNetwork::run ()
 
 		const auto	headers = c64uPassword.isNotEmpty () ? juce::String ( "X-Password: " ) + c64uPassword : juce::String ();
 
-		auto	options = juce::URL::InputStreamOptions ( juce::URL::ParameterHandling::inAddress )
-			.withHttpRequestCmd ( req.method )
-			.withStatusCode ( &req.statusCode )
-			.withConnectionTimeoutMs ( 200 )
-			.withNumRedirectsToFollow ( 0 )
-			.withExtraHeaders ( headers );
-
-		if ( auto stream = req.url.createInputStream ( options ) )
 		{
+			const juce::ScopedLock	sl ( streamLock );
+			activeStream = std::make_unique<juce::WebInputStream> ( req.url, req.method == "POST" );
+		}
+
+		activeStream->withExtraHeaders ( headers )
+					 .withCustomRequestCommand ( req.method )
+					 .withConnectionTimeout ( 200 )
+					 .withNumRedirectsToFollow ( 0 );
+
+		if ( activeStream->connect ( nullptr ) )
+		{
+			req.statusCode = activeStream->getStatusCode ();
+
 			if ( req.callback )
 			{
-				const auto	jsonString = stream->readEntireStreamAsString ();
+				const auto	jsonString = activeStream->readEntireStreamAsString ();
 				const auto	json = juce::JSON::parse ( jsonString );
 
 				req.callback ( json, req.statusCode );
@@ -113,6 +126,9 @@ void AsyncNetwork::run ()
 			if ( req.callback )
 				req.callback ( {}, 0 );
 		}
+
+		const juce::ScopedLock	sl ( streamLock );
+		activeStream.reset ();
 	}
 }
 //-----------------------------------------------------------------------------

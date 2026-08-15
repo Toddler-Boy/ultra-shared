@@ -38,6 +38,11 @@ private:
 	juce::Array<RequestData>	queue;
 	juce::WaitableEvent			wakeUp;
 
+	// The in-flight request, held so the destructor can abort a connect that
+	// blocks on a silent device
+	juce::CriticalSection					streamLock;
+	std::unique_ptr<juce::WebInputStream>	activeStream;
+
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR ( AsyncNetwork )
 };
 //-----------------------------------------------------------------------------
