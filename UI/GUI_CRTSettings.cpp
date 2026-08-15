@@ -109,6 +109,7 @@ VIC2_Render::settings GUI_CRTSettings::getVIC2SettingsFromPreferences () const
 	renderSettings.brightness = preferences->get<int> ( "tv/brightness" );
 	renderSettings.contrast = preferences->get<int> ( "tv/contrast" );
 	renderSettings.saturation = preferences->get<int> ( "tv/saturation"	);
+	renderSettings.warmth = float ( preferences->get<int> ( "tv/warmth" ) );
 
 	renderSettings.raw = ! preferences->get<bool> ( "crt/emulation" );
 
@@ -238,7 +239,7 @@ void GUI_CRTSettings::updateCRTsettingsUI ()
 
 	// Set palette
 	auto	palette = componentutils::findComponent<GUI_VIC2_Palette> ( "tv/palette", settingsComponentMap );
-	palette->setSettings ( vic2Settings.standard, vic2Settings.brightness, vic2Settings.contrast, vic2Settings.saturation, vic2Settings.firstLuma );
+	palette->setSettings ( vic2Settings.standard, vic2Settings.brightness, vic2Settings.contrast, vic2Settings.saturation, vic2Settings.firstLuma, vic2Settings.warmth );
 
 	updateDisablers ();
 }
@@ -370,7 +371,8 @@ void GUI_CRTSettings::connectComponents ()
 				choiceToPreference ( "tv/system" );
 				choiceToPreference ( "tv/first-luma" );
 
-				// Brightness/contrast/saturation
+				// Warmth/brightness/contrast/saturation
+				sliderToPreference ( "tv/warmth" );
 				sliderToPreference ( "tv/brightness" );
 				sliderToPreference ( "tv/contrast" );
 				sliderToPreference ( "tv/saturation" );
@@ -387,6 +389,7 @@ void GUI_CRTSettings::connectComponents ()
 
 		connectSlider ( "tv/system" );
 		connectSlider ( "tv/first-luma" );
+		connectSlider ( "tv/warmth/slider" );
 		connectSlider ( "tv/brightness/slider" );
 		connectSlider ( "tv/contrast/slider" );
 		connectSlider ( "tv/saturation/slider" );

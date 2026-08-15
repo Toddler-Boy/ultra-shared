@@ -12,7 +12,7 @@ GUI_VIC2_Palette::GUI_VIC2_Palette ()
 {
 	setOpaque ( true );
 
-	setSettings ( 0, 50.0f, 100.0f, 50.0f, false );
+	setSettings ( 0, 50.0f, 100.0f, 50.0f, false, 0.0f );
 
 	const auto	allowMouseClicks = buildinfo::isDeveloperMode ();
 	setInterceptsMouseClicks ( allowMouseClicks, allowMouseClicks );
@@ -32,11 +32,11 @@ void GUI_VIC2_Palette::paint ( juce::Graphics& g )
 }
 //-----------------------------------------------------------------------------
 
-void GUI_VIC2_Palette::setSettings ( const int standard, const float brightness, const float contrast, const float saturation, const bool earlyLuma )
+void GUI_VIC2_Palette::setSettings ( const int standard, const float brightness, const float contrast, const float saturation, const bool earlyLuma, const float warmth )
 {
 	colodore	colo;
 
-	const auto	yuvPal = colo.generateYUV ( standard, brightness, contrast, saturation, earlyLuma );
+	const auto	yuvPal = colo.generateYUV ( standard, brightness, contrast, saturation, earlyLuma, warmth );
 	const auto	rgbPal = colo.generateRGB ( standard, yuvPal );
 
 	for ( auto index = 0; const auto col : rgbPal )

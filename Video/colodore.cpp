@@ -30,11 +30,15 @@ colodore::colodore ()
 }
 //-----------------------------------------------------------------------------
 
-colodore::yuvPalette colodore::generateYUV ( const int standard, float brightness /*= 50.0f*/, float contrast /*= 100.0f*/, float saturation /*= 50.0f */, const bool earlyLuma /*= false */) const
+colodore::yuvPalette colodore::generateYUV ( const int standard, float brightness /*= 50.0f*/, float contrast /*= 100.0f*/, float saturation /*= 50.0f */, const bool earlyLuma /*= false */, const float warmth /*= 0.0f */) const
 {
 	brightness -= standard ? 70.0f : 50.0f;											// NTSC has a stronger brightness bias
 	contrast = std::lerp ( 0.4f, 1.2f, contrast * 0.01f );							// Contrast is boosted 20%
 	saturation = std::lerp ( 0.0f, standard ? 80.0f : 90.0f, saturation * 0.01f );	// PAL needs more saturation
+
+	// Palette warmth: opposing gains on the color-difference axes, red axis up
+	// and blue axis down for warm; greys carry no chroma and stay pure
+	const auto	warmthGain = warmth * 0.01f;
 
 	yuvPalette	dst;
 
@@ -65,6 +69,9 @@ colodore::yuvPalette colodore::generateYUV ( const int standard, float brightnes
 		u *= saturation;	// apply saturation
 		v *= saturation;
 
+		u *= 1.0f - warmthGain;	// apply warmth
+		v *= 1.0f + warmthGain;
+
 		y *= contrast;		// apply contrast
 		u *= contrast;
 		v *= contrast;
@@ -78,8 +85,11 @@ colodore::yuvPalette colodore::generateYUV ( const int standard, float brightnes
 }
 //-----------------------------------------------------------------------------
 
-colodore::shaderPalette colodore::generateYUV_YIQ ( const bool earlyLuma /*= false */ ) const
+colodore::shaderPalette colodore::generateYUV_YIQ ( const bool earlyLuma /*= false */, const float warmth /*= 0.0f */ ) const
 {
+	// Palette warmth as in generateYUV; the I axis is the NTSC warm one
+	const auto	warmthGain = warmth * 0.01f;
+
 	shaderPalette	dst;
 
 	dst.resize ( 2 * 16 * 3 );
@@ -119,6 +129,11 @@ colodore::shaderPalette colodore::generateYUV_YIQ ( const bool earlyLuma /*= fal
 			const auto	newAngNTSC = ( chromaOriginNTSC + angleSrc * chromaSector ) * chromaRadian;
 			i = std::sin ( newAngNTSC ) * chromaScale;
 			q = std::cos ( newAngNTSC ) * chromaScale;
+
+			u *= 1.0f - warmthGain;	// apply warmth
+			v *= 1.0f + warmthGain;
+			i *= 1.0f + warmthGain;
+			q *= 1.0f - warmthGain;
 		}
 
 		auto store = [ &dst ] ( const int offset, const float luma, const float chroma1, const float chroma2 )

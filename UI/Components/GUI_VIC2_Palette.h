@@ -14,7 +14,7 @@ public:
 	void mouseDoubleClick ( const juce::MouseEvent& event ) override;
 
 	// this
-	void setSettings ( const int standard, const float brightness, const float contrast, const float saturation, const bool earlyLuma );
+	void setSettings ( const int standard, const float brightness, const float contrast, const float saturation, const bool earlyLuma, const float warmth );
 
 private:
 	std::array<juce::Colour, 16>	palette;

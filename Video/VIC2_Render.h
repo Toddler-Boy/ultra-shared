@@ -78,11 +78,14 @@ public:
 		float	contrast = 100.0f;
 		float	saturation = 50.0f;
 
+		// -100.0 cold .. +100.0 warm, chroma only, greys stay pure
+		float	warmth = 0.0f;
+
 		bool	raw = false;
 
 		[[ nodiscard ]] bool needsNewPalette ( const settings& other ) const
 		{
-			return firstLuma != other.firstLuma || raw != other.raw;
+			return firstLuma != other.firstLuma || raw != other.raw || warmth != other.warmth;
 		}
 	};
 

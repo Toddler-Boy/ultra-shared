@@ -27,7 +27,7 @@ public:
 	using yuvPalette = std::array<std::array<float, 3>, 16>;
 	using rgbPalette = std::array<uint32_t, 16>;
 
-	[[ nodiscard ]] yuvPalette generateYUV ( const int standard, float brightness = 50.0f, float contrast = 100.0f, float saturation = 50.0f, const bool earlyLuma = false ) const;
+	[[ nodiscard ]] yuvPalette generateYUV ( const int standard, float brightness = 50.0f, float contrast = 100.0f, float saturation = 50.0f, const bool earlyLuma = false, const float warmth = 0.0f ) const;
 	[[ nodiscard ]] rgbPalette generateRGB ( const int standard, const yuvPalette& src ) const;
 
 	[[ nodiscard ]] inline uint32_t yuv2rgb ( const uint8_t y, const float u, const float v ) const
@@ -57,7 +57,7 @@ public:
 
 	using shaderPalette = std::vector<float>;
 
-	[[ nodiscard ]] shaderPalette generateYUV_YIQ ( const bool earlyLuma = false ) const;
+	[[ nodiscard ]] shaderPalette generateYUV_YIQ ( const bool earlyLuma = false, const float warmth = 0.0f ) const;
 
 private:
 	int8_t	firstL_revL_Angle[ 16 ][ 3 ] = {

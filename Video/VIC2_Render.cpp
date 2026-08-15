@@ -565,7 +565,7 @@ void VIC2_Render::findBorderColor ( const char* _filename )
 
 void VIC2_Render::generateLineYUV ()
 {
-	const auto	yuv = colo.generateYUV ( set.standard, set.brightness, set.contrast, set.saturation, set.firstLuma );
+	const auto	yuv = colo.generateYUV ( set.standard, set.brightness, set.contrast, set.saturation, set.firstLuma, set.warmth );
 
 	// Create Hanover bar palettes
 	if ( set.standard == settings::PAL )
