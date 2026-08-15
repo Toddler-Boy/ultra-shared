@@ -163,6 +163,7 @@ lime::CRTEmulation::settings GUI_CRTSettings::getCRTEmulationSettingsFromPrefere
 	set.brightness = preferences->get<int> ( "tv/brightness" );
 	set.contrast = preferences->get<int> ( "tv/contrast" );
 	set.saturation = preferences->get<int> ( "tv/saturation" );
+	set.tint = preferences->get<int> ( "tv/tint" );
 	set.overscan = preferences->get<int> ( "tv/overscan" );
 
 	// CRT emulation itself
@@ -394,9 +395,10 @@ void GUI_CRTSettings::connectComponents ()
 	}
 
 	//
-	// TV overscan
+	// TV tint & overscan (display-side only, the palette never sees them)
 	//
 	{
+		componentutils::findComponent<GUI_CRTSliderIcon> ( "tv/tint", settingsComponentMap )->onValueChange = settingsChanged;
 		componentutils::findComponent<GUI_CRTSliderIcon> ( "tv/overscan", settingsComponentMap )->onValueChange = settingsChanged;
 	}
 

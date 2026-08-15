@@ -52,6 +52,7 @@
 								{ "id": "brightness", "factory": "crt-slider-icon(tv, brightness)", "x": "prevX", "y": "prevB + bentoGap * 1.5", "r": "parW - bentoGap * 1.5", "h": "compH" },
 								{ "id": "contrast", "factory": "crt-slider-icon(tv, contrast)", "yd": "compGap" },
 								{ "id": "saturation", "factory": "crt-slider-icon(tv, saturation)", "yd": "compGap" },
+								{ "id": "tint", "factory": "crt-slider-icon(tv, tint, true)", "yd": "compGap" },
 								{ "id": "overscan", "factory": "crt-slider-icon(tv, overscan)", "yd": "compGap" }
 						]
 						},

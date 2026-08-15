@@ -31,6 +31,7 @@ namespace sharedpreferences
 			{ "tv",			"brightness",			55 },
 			{ "tv",			"contrast",				85 },
 			{ "tv",			"saturation",			55 },
+			{ "tv",			"tint",					0 },	// -100 cold .. +100 warm
 			{ "tv",			"overscan",				25 },
 
 			{ "crt",		"emulation",			true },
