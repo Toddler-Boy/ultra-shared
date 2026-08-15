@@ -6,6 +6,7 @@
 #include "ultra-shared/Config/DataSource.h"
 #include "ultra-shared/Helpers/ImageUtils.h"
 
+#include "PNG_Loader.h"
 #include "VIC2_Render.h"
 
 //-----------------------------------------------------------------------------
@@ -37,25 +38,18 @@ bool VIC2_Render::loadImage ( const char* filename, const void* data, const size
 {
 	indexBufferWidth = 0;
 
-	const auto	name = juce::String ( filename );
-
-	if ( ! name.endsWithIgnoreCase ( ".png" ) && ! name.endsWithIgnoreCase ( ".gif" ) )
+	if ( ! juce::String ( filename ).endsWithIgnoreCase ( ".png" ) )
 		return false;
 
-	// Standard image formats
-	auto	image = juce::ImageFileFormat::loadFrom ( data, size );
+	const auto	image = pngloader::decode ( data, size );
 
-	if ( image.isNull () )
-		return false;
+	if ( image.paletted )
+		return convertPaletted ( filename, image );
 
-	image = juce::SoftwareImageType ().convert ( image );
+	if ( image.isValid () )
+		return convertTrueColor ( filename, image.pixels.data (), image.width, image.height );
 
-	// Input images need to be 32-bit
-	image = image.convertedToFormat ( juce::Image::PixelFormat::ARGB );
-
-	// Convert to pure indices
-	auto	srcData = juce::Image::BitmapData ( image, juce::Image::BitmapData::ReadWriteMode::readOnly );
-	return convertTrueColor ( filename, (const uint32_t*)srcData.data, image.getWidth (), image.getHeight () );
+	return false;
 }
 //-----------------------------------------------------------------------------
 
@@ -89,6 +83,89 @@ void VIC2_Render::fillAll ( const uint8_t innerCol )
 	auto	dst = (uint8_t*)juce::Image::BitmapData ( indexBuffer, juce::Image::BitmapData::ReadWriteMode::writeOnly ).data;
 
 	std::fill_n ( dst, outerUnscaledLength, innerCol );
+}
+//-----------------------------------------------------------------------------
+
+// Match image colors to vic2-palette indices. Distinct source colors mean
+// distinct hardware indices, so pick the one-to-one assignment with the
+// smallest total distance over all colors; returns one index per input color
+static std::vector<uint8_t> matchToVIC2 ( const std::vector<uint32_t>& imgPalette, const colodore::rgbPalette& refPalette )
+{
+	// Distance function
+	auto distanceRGB = [] ( const uint32_t imgCol, const uint32_t refCol )
+	{
+		const auto	imgR = ( imgCol >> 16 ) & 0xFF;
+		const auto	imgG = ( imgCol >> 8 ) & 0xFF;
+		const auto	imgB = imgCol & 0xFF;
+
+		const auto	refR = ( refCol >> 16 ) & 0xFF;
+		const auto	refG = ( refCol >> 8 ) & 0xFF;
+		const auto	refB = refCol & 0xFF;
+
+		auto pow2 = [] ( const int input1, const int input2, const float weight )
+		{
+			const auto	input = std::abs ( input2 - input1 );
+			return int ( ( input * input ) * weight );
+		};
+
+		return pow2 ( imgR, refR, 0.299f ) + pow2 ( imgG, refG, 0.587f ) + pow2 ( imgB, refB, 0.114f );
+	};
+
+	const auto	numColors = int ( imgPalette.size () );
+	const auto	numIndices = int ( refPalette.size () );
+
+	std::array<std::array<int, 16>, 16>	cost {};
+	for ( auto pos = 0; pos < numColors; ++pos )
+		for ( auto index = 0; index < numIndices; ++index )
+			cost[ pos ][ index ] = distanceRGB ( imgPalette[ pos ], refPalette[ index ] );
+
+	// dp[mask] = cheapest assignment of the first popcount(mask) colors to exactly the indices in mask;
+	// masks only grow, so ascending order finalizes each entry before it is extended
+	std::vector<int>		dp ( size_t ( 1 ) << numIndices, INT_MAX );
+	std::vector<uint8_t>	lastIndex ( size_t ( 1 ) << numIndices, 0 );
+
+	dp[ 0 ] = 0;
+	for ( auto mask = 0; mask < int ( dp.size () ); ++mask )
+	{
+		if ( dp[ mask ] == INT_MAX )
+			continue;
+
+		const auto	pos = std::popcount ( unsigned ( mask ) );
+		if ( pos >= numColors )
+			continue;
+
+		for ( auto index = 0; index < numIndices; ++index )
+		{
+			if ( mask & ( 1 << index ) )
+				continue;
+
+			const auto	next = mask | ( 1 << index );
+			if ( const auto total = dp[ mask ] + cost[ pos ][ index ]; total < dp[ next ] )
+			{
+				dp[ next ] = total;
+				lastIndex[ next ] = uint8_t ( index );
+			}
+		}
+	}
+
+	// Cheapest complete assignment, then walk it backwards to recover each color's index
+	auto	bestMask = 0;
+	auto	bestTotal = INT_MAX;
+	for ( auto mask = 0; mask < int ( dp.size () ); ++mask )
+		if ( std::popcount ( unsigned ( mask ) ) == numColors && dp[ mask ] < bestTotal )
+		{
+			bestTotal = dp[ mask ];
+			bestMask = mask;
+		}
+
+	std::vector<uint8_t>	out ( imgPalette.size () );
+	for ( auto mask = bestMask; mask; )
+	{
+		const auto	index = lastIndex[ mask ];
+		out[ size_t ( std::popcount ( unsigned ( mask ) ) - 1 ) ] = index;
+		mask &= ~( 1 << index );
+	}
+	return out;
 }
 //-----------------------------------------------------------------------------
 
@@ -128,88 +205,11 @@ bool VIC2_Render::convertTrueColor ( const char* filename, const uint32_t* rawDa
 	//
 	// Second pass: map image palette to vic2-palette indices
 	//
-	auto createIndexMap = [] ( const std::vector<uint32_t>& imgPalette, const std::array<uint32_t, 16>& refPalette )
-	{
-		// Distance function
-		auto distanceRGB = [] ( const uint32_t imgCol, const uint32_t refCol )
-		{
-			const auto	imgR = ( imgCol >> 16 ) & 0xFF;
-			const auto	imgG = ( imgCol >> 8 ) & 0xFF;
-			const auto	imgB = imgCol & 0xFF;
+	const auto	vic2Indices = matchToVIC2 ( imagePalette, referencePalette );
 
-			const auto	refR = ( refCol >> 16 ) & 0xFF;
-			const auto	refG = ( refCol >> 8 ) & 0xFF;
-			const auto	refB = refCol & 0xFF;
-
-			auto pow2 = [] ( const int input1, const int input2, const float weight )
-			{
-				const auto	input = std::abs ( input2 - input1 );
-				return int ( ( input * input ) * weight );
-			};
-
-			return pow2 ( imgR, refR, 0.299f ) + pow2 ( imgG, refG, 0.587f ) + pow2 ( imgB, refB, 0.114f );
-		};
-
-		// Distinct source colors mean distinct hardware indices, so pick the one-to-one
-		// assignment with the smallest total distance over all colors
-		const auto	numColors = int ( imgPalette.size () );
-		const auto	numIndices = int ( refPalette.size () );
-
-		std::array<std::array<int, 16>, 16>	cost {};
-		for ( auto pos = 0; pos < numColors; ++pos )
-			for ( auto index = 0; index < numIndices; ++index )
-				cost[ pos ][ index ] = distanceRGB ( imgPalette[ pos ], refPalette[ index ] );
-
-		// dp[mask] = cheapest assignment of the first popcount(mask) colors to exactly the indices in mask;
-		// masks only grow, so ascending order finalizes each entry before it is extended
-		std::vector<int>		dp ( size_t ( 1 ) << numIndices, INT_MAX );
-		std::vector<uint8_t>	lastIndex ( size_t ( 1 ) << numIndices, 0 );
-
-		dp[ 0 ] = 0;
-		for ( auto mask = 0; mask < int ( dp.size () ); ++mask )
-		{
-			if ( dp[ mask ] == INT_MAX )
-				continue;
-
-			const auto	pos = std::popcount ( unsigned ( mask ) );
-			if ( pos >= numColors )
-				continue;
-
-			for ( auto index = 0; index < numIndices; ++index )
-			{
-				if ( mask & ( 1 << index ) )
-					continue;
-
-				const auto	next = mask | ( 1 << index );
-				if ( const auto total = dp[ mask ] + cost[ pos ][ index ]; total < dp[ next ] )
-				{
-					dp[ next ] = total;
-					lastIndex[ next ] = uint8_t ( index );
-				}
-			}
-		}
-
-		// Cheapest complete assignment, then walk it backwards to recover each color's index
-		auto	bestMask = 0;
-		auto	bestTotal = INT_MAX;
-		for ( auto mask = 0; mask < int ( dp.size () ); ++mask )
-			if ( std::popcount ( unsigned ( mask ) ) == numColors && dp[ mask ] < bestTotal )
-			{
-				bestTotal = dp[ mask ];
-				bestMask = mask;
-			}
-
-		std::unordered_map<uint32_t, uint8_t>	mapped;
-		for ( auto mask = bestMask; mask; )
-		{
-			const auto	index = lastIndex[ mask ];
-			mapped[ imgPalette[ size_t ( std::popcount ( unsigned ( mask ) ) - 1 ) ] ] = index;
-			mask &= ~( 1 << index );
-		}
-		return mapped;
-	};
-
-	auto	mapped = createIndexMap ( imagePalette, referencePalette );
+	std::unordered_map<uint32_t, uint8_t>	mapped;
+	for ( size_t i = 0; i < imagePalette.size (); ++i )
+		mapped[ imagePalette[ i ] ] = vic2Indices[ i ];
 
 	//
 	// Third pass: create index buffer
@@ -232,6 +232,91 @@ bool VIC2_Render::convertTrueColor ( const char* filename, const uint32_t* rawDa
 
 	// End of conversion
 	indexBufferWidth = width;
+
+	findBorderColor ( filename );
+
+	backupIndexBuffer ();
+
+	return true;
+}
+//-----------------------------------------------------------------------------
+
+bool VIC2_Render::convertPaletted ( const char* filename, const pngloader::image& img )
+{
+	indexBufferWidth = 0;
+
+	// Images has to either 320x200 or 384x272
+	if ( ! ( ( img.width == innerUnscaledWidth && img.height == innerUnscaledHeight ) || ( img.width == outerUnscaledWidth && img.height == outerUnscaledHeight ) ) )
+		return false;
+
+	// Collect the palette entries the image actually uses; files routinely
+	// carry a full 256-entry palette with only a handful referenced
+	std::array<bool, 256>	used {};
+	for ( const auto index : img.indices )
+		used[ index ] = true;
+
+	// An index past the palette means the file is broken
+	for ( auto i = int ( img.palette.size () ); i < 256; ++i )
+		if ( used[ i ] )
+			return false;
+
+	std::vector<uint32_t>		colors;
+	std::array<uint8_t, 256>	colorPos {};
+
+	for ( auto i = 0; i < int ( img.palette.size () ); ++i )
+	{
+		if ( ! used[ i ] )
+			continue;
+
+		const auto	col = img.palette[ i ];
+
+		// Entries sharing one RGB value collapse onto one color
+		if ( const auto it = std::find ( colors.begin (), colors.end (), col ); it != colors.end () )
+		{
+			colorPos[ i ] = uint8_t ( it - colors.begin () );
+			continue;
+		}
+
+		colorPos[ i ] = uint8_t ( colors.size () );
+		colors.emplace_back ( col );
+
+		jassert ( colors.size () <= 16 );
+		if ( colors.size () > 16 )
+			return false;
+	}
+
+	// Create palette to match to. Getting better results with brighter, more saturated colors (PAL)
+	const auto	yuv = colo.generateYUV ( settings::colorStandard::PAL, 60.0f, 100.0f, 55.0f );
+	const auto	referencePalette = colo.generateRGB ( settings::colorStandard::PAL, yuv );
+
+	const auto	vic2Indices = matchToVIC2 ( colors, referencePalette );
+
+	// Palette-index to vic2-index blit table
+	std::array<uint8_t, 256>	lut {};
+	for ( auto i = 0; i < int ( img.palette.size () ); ++i )
+		if ( used[ i ] )
+			lut[ i ] = vic2Indices[ colorPos[ i ] ];
+
+	// Create index buffer
+	{
+		auto	dst = (uint8_t*)juce::Image::BitmapData ( indexBuffer, juce::Image::BitmapData::ReadWriteMode::writeOnly ).data;
+		auto	src = img.indices.data ();
+
+		const auto	rowByteSkip = ( img.width == innerUnscaledWidth ) ? unscaledBorderSizeX * 2 : 0;
+		if ( rowByteSkip )
+			dst += unscaledBorderSizeY * outerUnscaledWidth + unscaledBorderSizeX;
+
+		for ( auto y = 0; y < img.height; ++y )
+		{
+			for ( auto x = 0; x < img.width; ++x )
+				*dst++ = lut[ *src++ ];
+
+			dst += rowByteSkip;
+		}
+	}
+
+	// End of conversion
+	indexBufferWidth = img.width;
 
 	findBorderColor ( filename );
 

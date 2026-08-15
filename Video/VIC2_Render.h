@@ -4,6 +4,8 @@
 
 #include "colodore.h"
 
+namespace pngloader { struct image; }
+
 //-----------------------------------------------------------------------------
 
 enum vic2 : uint8_t
@@ -51,7 +53,7 @@ class VIC2_Render final
 public:
 	VIC2_Render ( const bool withBackup );
 
-	// Load image from file (*.png, *.gif)
+	// Load image from file (*.png)
 	bool loadImage ( const char* filename );
 
 	// Same, with the bytes supplied by the caller (factory data from the pak);
@@ -122,6 +124,10 @@ public:
 private:
 	// Image has to be 32-bit per pixel, alpha is ignored
 	[[ nodiscard ]] bool convertTrueColor ( const char* filename, const uint32_t* rawData, const int width, const int height );
+
+	// Paletted image straight from the decoder, pixels stay palette indices
+	// and only the palette entries get matched
+	[[ nodiscard ]] bool convertPaletted ( const char* filename, const pngloader::image& img );
 
 	juce::SharedResourcePointer<VIC2_Render_Data>	characterData;
 
