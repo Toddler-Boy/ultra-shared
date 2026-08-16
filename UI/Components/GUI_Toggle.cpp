@@ -5,6 +5,12 @@
 
 //----------------------------------------------------------------------------------
 
+// A full 0-to-1 swing takes this long; a mid-flight reversal travels at the
+// same speed over the shorter distance
+constexpr auto	swingMs = 85.0;
+
+//----------------------------------------------------------------------------------
+
 GUI_Toggle::GUI_Toggle ( const juce::String& name )
 	: juce::ToggleButton ( name )
 {
@@ -23,6 +29,17 @@ void GUI_Toggle::enablementChanged ()
 
 void GUI_Toggle::paintButton ( juce::Graphics& g, bool /*isHover*/, bool /*isDown*/ )
 {
+	// Advance the animation by the wall time since it started
+	const auto	target = getToggleState () ? 1.0f : 0.0f;
+
+	if ( animPosition != target )
+	{
+		const auto	travelled = float ( ( juce::Time::getMillisecondCounterHiRes () - animStartTime ) / swingMs );
+
+		animPosition = animStartPosition < target ? std::min ( target, animStartPosition + travelled )
+												  : std::max ( target, animStartPosition - travelled );
+	}
+
 	auto	b = getLocalBounds ().toFloat ();
 	b.reduce ( 0.0f, b.getHeight () * 0.1f );
 
@@ -51,6 +68,11 @@ void GUI_Toggle::paintButton ( juce::Graphics& g, bool /*isHover*/, bool /*isDow
 			g.fillRoundedRectangle ( circleBounds, radius );
 		}
 	}
+
+	// Still moving: painting again next v-blank keeps the loop alive,
+	// arriving simply stops asking
+	if ( animPosition != target )
+		repaint ();
 }
 //----------------------------------------------------------------------------------
 
@@ -58,24 +80,19 @@ void GUI_Toggle::buttonStateChanged ()
 {
 	const auto	newState = getToggleState () ? 1.0f : 0.0f;
 
-	if ( newState != animPosition )
+	if ( newState == animPosition )
+		return;
+
+	// Not visible = nothing to animate, snap
+	if ( ! isShowing () )
 	{
-		if ( isShowing () )
-			startTimerHz ( 60 );
-		else
-			animPosition = newState;
+		animPosition = newState;
+		return;
 	}
-}
-//----------------------------------------------------------------------------------
 
-void GUI_Toggle::timerCallback ()
-{
-	const auto	rate = 0.2f * ( getToggleState () ? 1.0f : -1.0f );
-
-	animPosition = std::clamp ( animPosition + rate, 0.0f, 1.0f );
-
-	if ( animPosition == 0.0f || animPosition == 1.0f )
-		stopTimer ();
+	// A mid-flight flip continues from where the knob is
+	animStartPosition = animPosition;
+	animStartTime = juce::Time::getMillisecondCounterHiRes ();
 
 	repaint ();
 }
