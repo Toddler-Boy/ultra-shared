@@ -12,6 +12,9 @@ namespace textutils
 {
 	[[ nodiscard ]] juce::StringArray getFilteredStrings ( const juce::StringArray& arr, const juce::StringArray& ext );
 
+	// True when text is an http(s) URL whose file name ends in one of exts
+	[[ nodiscard ]] bool isUrlWithExtension ( const juce::String& text, const juce::StringArray& exts );
+
 	// The environment's locale, resolved once; classic when the name does not resolve
 	[[ nodiscard ]] const std::locale& userLocale ();
 

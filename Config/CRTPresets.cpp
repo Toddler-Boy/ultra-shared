@@ -256,28 +256,41 @@ void CRTPreset::load ( const juce::String& markedName )
 }
 //-----------------------------------------------------------------------------
 
-void CRTPreset::applyTo ( Preferences& preferences ) const
+bool CRTPreset::walk ( Preferences& preferences, const bool compareOnly ) const
 {
 	for ( const auto& e : entries )
 	{
+		auto	ok = true;
+
 		if ( const auto* n = std::get_if<int> ( &e.value ) )
-		{
-			preferences.set ( e.path, *n );
-		}
+			ok = applyOrMatch ( preferences, e.path, *n, compareOnly );
 		else if ( const auto* d = std::get_if<float> ( &e.value ) )
-		{
-			preferences.set ( e.path, *d );
-		}
+			ok = applyOrMatch ( preferences, e.path, *d, compareOnly );
 		else if ( const auto* p = std::get_if<YamlFile::vec2i> ( &e.value ) )
-		{
-			preferences.set ( e.path, *p );
-		}
+			ok = applyOrMatch ( preferences, e.path, *p, compareOnly );
 		else if ( const auto* s = std::get_if<std::string> ( &e.value ) )
 		{
-			if ( const auto markedMask = markedMaskName ( juce::String ( *s ) ); maskBitmapExists ( markedMask ) )
+			// The mask name compares marker-normalized, and only an existing
+			// bitmap may be applied
+			const auto	markedMask = markedMaskName ( juce::String ( *s ) );
+
+			if ( compareOnly )
+				ok = markedMaskName ( preferences.get<juce::String> ( e.path ) ) == markedMask;
+			else if ( maskBitmapExists ( markedMask ) )
 				preferences.set ( e.path, markedMask );
 		}
+
+		if ( ! ok )
+			return false;
 	}
+
+	return true;
+}
+//-----------------------------------------------------------------------------
+
+void CRTPreset::applyTo ( Preferences& preferences ) const
+{
+	walk ( preferences, false );
 }
 //-----------------------------------------------------------------------------
 
@@ -286,30 +299,7 @@ bool CRTPreset::matches ( const Preferences& preferences ) const
 	if ( ! valid )
 		return false;
 
-	for ( const auto& e : entries )
-	{
-		if ( const auto* n = std::get_if<int> ( &e.value ) )
-		{
-			if ( preferences.get<int> ( e.path ) != *n )
-				return false;
-		}
-		else if ( const auto* d = std::get_if<float> ( &e.value ) )
-		{
-			if ( preferences.get<float> ( e.path ) != *d )
-				return false;
-		}
-		else if ( const auto* p = std::get_if<YamlFile::vec2i> ( &e.value ) )
-		{
-			if ( preferences.get<YamlFile::vec2i> ( e.path ) != *p )
-				return false;
-		}
-		else if ( const auto* s = std::get_if<std::string> ( &e.value ) )
-		{
-			if ( markedMaskName ( preferences.get<juce::String> ( e.path ) ) != markedMaskName ( juce::String ( *s ) ) )
-				return false;
-		}
-	}
-
-	return true;
+	// compareOnly never writes
+	return walk ( const_cast<Preferences&> ( preferences ), true );
 }
 //-----------------------------------------------------------------------------

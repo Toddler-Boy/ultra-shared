@@ -72,6 +72,23 @@ juce::StringArray textutils::getFilteredStrings ( const juce::StringArray& arr, 
 }
 //-----------------------------------------------------------------------------
 
+bool textutils::isUrlWithExtension ( const juce::String& text, const juce::StringArray& exts )
+{
+	const auto	trimmed = text.trim ().toLowerCase ();
+
+	if ( ! trimmed.startsWith ( "http://" ) && ! trimmed.startsWith ( "https://" ) )
+		return false;
+
+	const auto	fname = juce::URL ( trimmed ).getFileName ();
+
+	for ( const auto& ext : exts )
+		if ( fname.endsWithIgnoreCase ( ext ) )
+			return true;
+
+	return false;
+}
+//-----------------------------------------------------------------------------
+
 juce::String textutils::getHumanNumber ( const int64_t number )
 {
 	// Formatted wide: numpunct<char> can only hand back a single byte, so a locale that

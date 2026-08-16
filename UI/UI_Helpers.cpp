@@ -260,6 +260,32 @@ juce::PopupMenu::Item UI::newDangerousMenuItem ( const juce::String& name, const
 }
 //-----------------------------------------------------------------------------
 
+juce::PopupMenu UI::newPopupMenu ( juce::Component& owner )
+{
+	juce::PopupMenu	m;
+
+	m.setLookAndFeel ( &owner.getLookAndFeel () );
+	return m;
+}
+//-----------------------------------------------------------------------------
+
+void UI::showMenuAtMouse ( juce::PopupMenu& m, juce::Component& owner )
+{
+	m.showMenuAsync ( juce::PopupMenu::Options ()
+					  .withTargetComponent ( owner )
+					  .withMousePosition ()
+					  .withDeletionCheck ( owner ) );
+}
+//-----------------------------------------------------------------------------
+
+void UI::showMenuAtButton ( juce::PopupMenu& m, juce::Component& owner, juce::Component& anchor )
+{
+	m.showMenuAsync ( juce::PopupMenu::Options ()
+					  .withTargetComponent ( anchor )
+					  .withDeletionCheck ( owner ) );
+}
+//-----------------------------------------------------------------------------
+
 void UI::setLayout ( gin::LayoutSupport& layout, const juce::StringArray& paths )
 {
 	if ( ! datasource::isPak () )
@@ -314,115 +340,80 @@ std::pair<std::unique_ptr<juce::Drawable>, int> UI::getSVG ( const juce::String&
 }
 //-----------------------------------------------------------------------------
 
-juce::Path& UI::getScaledPath ( const juce::String& resourceName, juce::Rectangle<float> rect, juce::RectanglePlacement placement /*= 0*/, float padding /* = 0.0f */ )
+// Shared cache plumbing for the two scaled-path getters; the transform turns
+// the freshly loaded drawable into the requested geometry
+struct pathCacheEntry
 {
-	// The path cache below is unlocked, message thread only
+	juce::Rectangle<float>		rect;
+	juce::RectanglePlacement	placement;
+	juce::Path					path;
+};
+
+using pathCache = juce::HashMap<juce::String, pathCacheEntry>;
+using pathTransform = void (*) ( juce::Drawable&, const juce::Rectangle<float>&, juce::RectanglePlacement, int orgSize );
+
+static juce::Path& cachedScaledPath ( pathCache& cache, const juce::String& resourceName, juce::Rectangle<float> rect, juce::RectanglePlacement placement, float padding, pathTransform transform )
+{
+	// The path caches are unlocked, message thread only
 	JUCE_ASSERT_MESSAGE_THREAD
 
 	padding *= std::min ( rect.getWidth (), rect.getHeight () );
 	rect.reduce ( padding, padding );
 
-	//
-	// Cache
-	//
-	struct cacheEntry
+	// Already in cache with matching sizes?
+	if ( cache.contains ( resourceName ) )
 	{
-		juce::Rectangle<float>		rect;
-		juce::RectanglePlacement	placement;
-		juce::Path					path;
-	};
+		auto&	p = cache.getReference ( resourceName );
 
-	static juce::HashMap<juce::String, cacheEntry>	paths;
-
-	// Already in cache?
-	if ( paths.contains ( resourceName ) )
-	{
-		auto&	p = paths.getReference ( resourceName );
-
-		// Cache matches sizes?
 		if ( p.rect == rect && p.placement == placement )
 			return p.path;
 	}
 
-	auto	[ drawable, _ ] = getSVG ( resourceName );
+	auto	[ drawable, orgSize ] = UI::getSVG ( resourceName );
 
-	//
-	// Convert SVG to scaled path
-	//
-	drawable->setDrawableTransformToFit ( rect, placement );
-	auto	path = drawable->getOutlineAsPath ();
+	transform ( *drawable, rect, placement, orgSize );
 
-	//
-	// Store in cache
-	//
-	paths.set ( resourceName, { rect, placement, path } );
-	return paths.getReference ( resourceName ).path;
+	cache.set ( resourceName, { rect, placement, drawable->getOutlineAsPath () } );
+	return cache.getReference ( resourceName ).path;
+}
+//-----------------------------------------------------------------------------
+
+juce::Path& UI::getScaledPath ( const juce::String& resourceName, juce::Rectangle<float> rect, juce::RectanglePlacement placement /*= 0*/, float padding /* = 0.0f */ )
+{
+	// Own cache per getter: the same resource may live in both getters with
+	// different geometry
+	static pathCache	paths;
+
+	return cachedScaledPath ( paths, resourceName, rect, placement, padding, [] ( juce::Drawable& d, const juce::Rectangle<float>& r, juce::RectanglePlacement pl, int )
+	{
+		d.setDrawableTransformToFit ( r, pl );
+	} );
 }
 //-----------------------------------------------------------------------------
 
 juce::Path& UI::getScaledPathWithSize ( const juce::String& resourceName, juce::Rectangle<float> rect, juce::RectanglePlacement placement /*= 0*/, float padding /* = 0.0f */ )
 {
-	// The path cache below is unlocked, message thread only
-	JUCE_ASSERT_MESSAGE_THREAD
+	static pathCache	paths;
 
-	padding *= std::min ( rect.getWidth (), rect.getHeight () );
-	rect.reduce ( padding, padding );
-
-	//
-	// Cache
-	//
-	struct cacheEntry
+	return cachedScaledPath ( paths, resourceName, rect, placement, padding, [] ( juce::Drawable& d, const juce::Rectangle<float>& r, juce::RectanglePlacement pl, int orgSize )
 	{
-		juce::Rectangle<float>		rect;
-		juce::RectanglePlacement	placement;
-		juce::Path					path;
-	};
-
-	static juce::HashMap<juce::String, cacheEntry>	paths;
-
-	// Already in cache?
-	if ( paths.contains ( resourceName ) )
-	{
-		auto& p = paths.getReference ( resourceName );
-
-		// Cache matches sizes?
-		if ( p.rect == rect && p.placement == placement )
-			return p.path;
-	}
-
-	auto [ drawable, orgSize ] = getSVG ( resourceName );
-
-	//
-	// Convert SVG to scaled path
-	//
-	{
-		const auto	p = drawable->getOutlineAsPath ();
-		const auto	b = p.getBounds ();
-		const auto	newSize = std::max ( rect.getWidth (), rect.getHeight () ) / orgSize;
+		// Scale about the SVG's original size instead of fitting the rect
+		const auto	b = d.getOutlineAsPath ().getBounds ();
+		const auto	newSize = std::max ( r.getWidth (), r.getHeight () ) / orgSize;
 
 		auto	newX = b.getWidth () * 0.5f * newSize;
 		auto	newY = b.getHeight () * 0.5f * newSize;
 
-		if ( placement.testFlags ( juce::RectanglePlacement::xMid ) )
-			newX = rect.getCentreX ();
+		if ( pl.testFlags ( juce::RectanglePlacement::xMid ) )
+			newX = r.getCentreX ();
 
-		if ( placement.testFlags ( juce::RectanglePlacement::yMid ) )
-			newY = rect.getCentreY ();
+		if ( pl.testFlags ( juce::RectanglePlacement::yMid ) )
+			newY = r.getCentreY ();
 
-		auto	trans = juce::AffineTransform::translation ( b.getWidth () * -0.5f - b.getX (), b.getHeight () * -0.5f - b.getY () )
-						.scaled ( newSize )
-						.translated ( newX, newY );
-
-		drawable->setDrawableTransform ( trans );
-	}
-
-	auto	path = drawable->getOutlineAsPath ();
-
-	//
-	// Store in cache
-	//
-	paths.set ( resourceName, { rect, placement, path } );
-	return paths.getReference ( resourceName ).path;
+		d.setDrawableTransform ( juce::AffineTransform::translation ( b.getWidth () * -0.5f - b.getX (), b.getHeight () * -0.5f - b.getY () )
+								 .scaled ( newSize )
+								 .translated ( newX, newY ) );
+	} );
 }
 //-----------------------------------------------------------------------------
 

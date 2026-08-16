@@ -48,6 +48,20 @@ private:
 		YamlFile::ConfigValue	value;
 	};
 
+	// applyTo and matches share one walk: compareOnly turns every set into an
+	// equality check and reports the first mismatch
+	bool walk ( Preferences& preferences, bool compareOnly ) const;
+
+	template <typename T>
+	static bool applyOrMatch ( Preferences& preferences, const juce::String& path, const T& value, const bool compareOnly )
+	{
+		if ( compareOnly )
+			return preferences.get<T> ( path ) == value;
+
+		preferences.set ( path, value );
+		return true;
+	}
+
 	bool				valid = false;
 	juce::String		marked;
 	std::vector<entry>	entries;

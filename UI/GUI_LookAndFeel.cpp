@@ -183,43 +183,33 @@ void GUI_LookAndFeel::drawDocumentWindowTitleBar ( juce::DocumentWindow& window,
 }
 //----------------------------------------------------------------------------------
 
-void GUI_LookAndFeel::mouseEnter ( const juce::MouseEvent& e )
+// The three window buttons highlight as one group: when the hovered button
+// reaches the given state, the whole row follows
+static void syncWindowButtons ( const juce::MouseEvent& e, const juce::Button::ButtonState state )
 {
 	auto	win = dynamic_cast<juce::DocumentWindow*> ( e.eventComponent->getTopLevelComponent () );
 	if ( ! win )
 		return;
 
 	auto	evtBut = dynamic_cast<juce::Button*> ( e.eventComponent );
-	if ( ! evtBut )
+	if ( ! evtBut || evtBut->getState () != state )
 		return;
 
-	const auto	butState = evtBut->getState ();
-	if ( butState != juce::Button::buttonOver )
-		return;
+	win->getCloseButton ()->setState ( state );
+	win->getMinimiseButton ()->setState ( state );
+	win->getMaximiseButton ()->setState ( state );
+}
+//----------------------------------------------------------------------------------
 
-	win->getCloseButton ()->setState ( juce::Button::buttonOver );
-	win->getMinimiseButton ()->setState ( juce::Button::buttonOver );
-	win->getMaximiseButton ()->setState ( juce::Button::buttonOver );
+void GUI_LookAndFeel::mouseEnter ( const juce::MouseEvent& e )
+{
+	syncWindowButtons ( e, juce::Button::buttonOver );
 }
 //----------------------------------------------------------------------------------
 
 void GUI_LookAndFeel::mouseExit ( const juce::MouseEvent& e )
 {
-	auto	win = dynamic_cast<juce::DocumentWindow*> ( e.eventComponent->getTopLevelComponent () );
-	if ( ! win )
-		return;
-
-	auto	evtBut = dynamic_cast<juce::Button*> ( e.eventComponent );
-	if ( ! evtBut )
-		return;
-
-	const auto	butState = evtBut->getState ();
-	if ( butState != juce::Button::buttonNormal )
-		return;
-
-	win->getCloseButton ()->setState ( juce::Button::buttonNormal );
-	win->getMinimiseButton ()->setState ( juce::Button::buttonNormal );
-	win->getMaximiseButton ()->setState ( juce::Button::buttonNormal );
+	syncWindowButtons ( e, juce::Button::buttonNormal );
 }
 //----------------------------------------------------------------------------------
 
@@ -998,76 +988,74 @@ int GUI_LookAndFeel::getPopupMenuColumnSeparatorWidthWithOptions ( const juce::P
 }
 //-------------------------------------------------------------------------------------------------
 
+// The bubble outline with the tip notch spliced into the top or bottom edge
+static juce::Path bubblePath ( const float w, const float h, const float corner, const float tipSize, const bool tipAbove )
+{
+	const auto	c = w / 2.0f;
+
+	juce::Path	p;
+
+	p.startNewSubPath ( { corner, 0.0f } );
+
+	if ( tipAbove )
+	{
+		p.lineTo ( { c - tipSize, 0.0f } );
+		p.lineTo ( { c, -tipSize } );
+		p.lineTo ( { c + tipSize, 0.0f } );
+	}
+
+	p.lineTo ( { w - corner, 0.0f } );
+	p.quadraticTo ( { w, 0.0f }, { w, corner } );
+	p.lineTo ( { w, h - corner } );
+	p.quadraticTo ( { w, h }, { w - corner, h } );
+
+	if ( ! tipAbove )
+	{
+		p.lineTo ( { c + tipSize, h } );
+		p.lineTo ( { c, h + tipSize } );
+		p.lineTo ( { c - tipSize, h } );
+	}
+
+	p.lineTo ( { corner, h } );
+	p.quadraticTo ( { 0.0f, h }, { 0.0f, h - corner } );
+	p.lineTo ( { 0.0f, corner } );
+	p.quadraticTo ( { 0.0f, 0.0f }, { corner, 0.0f } );
+	p.closeSubPath ();
+
+	return p;
+}
+//-------------------------------------------------------------------------------------------------
+
 void GUI_LookAndFeel::drawBubble ( juce::Graphics& g, juce::BubbleComponent& comp, const juce::Point<float>& tip, const juce::Rectangle<float>& _body )
 {
 	const auto	body = _body.reduced ( 0.5f );
-	const auto	w = body.getWidth ();
-	const auto	c = w / 2.0f;
-	const auto	h = body.getHeight ();
 
 	constexpr	auto	corner = 3.0f;
 
-	if ( const auto tipSizeAbove = float ( _body.getY () - tip.getY () ) / 1.5f; tipSizeAbove > 0.1f )
-	{
-		juce::Path	p;
+	// The tip size measures against the unreduced body
+	const auto	tipSizeAbove = float ( _body.getY () - tip.getY () ) / 1.5f;
+	const auto	tipSizeBelow = float ( tip.getY () - _body.getBottom () ) / 1.5f;
 
-		p.startNewSubPath ( { corner, 0.0f } );
-		p.lineTo ( { c - tipSizeAbove, 0.0f } );
-		p.lineTo ( { c, -tipSizeAbove } );
-		p.lineTo ( { c + tipSizeAbove, 0.0f } );
-		p.lineTo ( { w - corner, 0.0f } );
-		p.quadraticTo ( { w, 0.0f }, { w, corner } );
-		p.lineTo ( { w, h - corner } );
-		p.quadraticTo ( { w, h }, { w - corner, h } );
-		p.lineTo ( { corner, h } );
-		p.quadraticTo ( { 0.0f, h }, { 0.0f, h - corner } );
-		p.lineTo ( { 0.0f, corner } );
-		p.quadraticTo ( { 0.0f, 0.0f }, { corner, 0.0f } );
-		p.closeSubPath ();
+	const auto	tipAbove = tipSizeAbove > 0.1f;
 
-		p.applyTransform ( juce::AffineTransform::translation ( body.getTopLeft () ) );
-
-		g.setColour ( comp.findColour ( juce::BubbleComponent::backgroundColourId ) );
-		g.fillPath ( p );
-
-		if ( const auto lineW = UI::lineWidth ( UI::lines::slider_bubble ); UI::lines::visible ( lineW ) )
-		{
-			g.setColour ( comp.findColour ( juce::BubbleComponent::outlineColourId ) );
-			g.strokePath ( p, juce::PathStrokeType ( lineW ) );
-		}
-	}
-	else if ( const auto tipSizeBelow = float ( tip.getY () - _body.getBottom () ) / 1.5f; tipSizeBelow > 0.1f )
-	{
-		juce::Path	p;
-
-		p.startNewSubPath ( { corner, 0.0f } );
-		p.lineTo ( { w - corner, 0.0f } );
-		p.quadraticTo ( { w, 0.0f }, { w, corner } );
-		p.lineTo ( { w, h - corner } );
-		p.quadraticTo ( { w, h }, { w - corner, h } );
-		p.lineTo ( { c + tipSizeBelow, h } );
-		p.lineTo ( { c, h + tipSizeBelow } );
-		p.lineTo ( { c - tipSizeBelow, h } );
-		p.lineTo ( { corner, h } );
-		p.quadraticTo ( { 0.0f, h }, { 0.0f, h - corner } );
-		p.lineTo ( { 0.0f, corner } );
-		p.quadraticTo ( { 0.0f, 0.0f }, { corner, 0.0f } );
-		p.closeSubPath ();
-
-		p.applyTransform ( juce::AffineTransform::translation ( body.getTopLeft () ) );
-
-		g.setColour ( comp.findColour ( juce::BubbleComponent::backgroundColourId ) );
-		g.fillPath ( p );
-
-		if ( const auto lineW = UI::lineWidth ( UI::lines::slider_bubble ); UI::lines::visible ( lineW ) )
-		{
-			g.setColour ( comp.findColour ( juce::BubbleComponent::outlineColourId ) );
-			g.strokePath ( p, juce::PathStrokeType ( lineW ) );
-		}
-	}
-	else
+	// No visible tip on either side, nothing to splice
+	if ( ! tipAbove && tipSizeBelow <= 0.1f )
 	{
 		LookAndFeel_V4::drawBubble ( g, comp, tip, _body );
+		return;
+	}
+
+	auto	p = bubblePath ( body.getWidth (), body.getHeight (), corner, tipAbove ? tipSizeAbove : tipSizeBelow, tipAbove );
+
+	p.applyTransform ( juce::AffineTransform::translation ( body.getTopLeft () ) );
+
+	g.setColour ( comp.findColour ( juce::BubbleComponent::backgroundColourId ) );
+	g.fillPath ( p );
+
+	if ( const auto lineW = UI::lineWidth ( UI::lines::slider_bubble ); UI::lines::visible ( lineW ) )
+	{
+		g.setColour ( comp.findColour ( juce::BubbleComponent::outlineColourId ) );
+		g.strokePath ( p, juce::PathStrokeType ( lineW ) );
 	}
 }
 //-------------------------------------------------------------------------------------------------

@@ -74,6 +74,12 @@ namespace UI
 	[[ nodiscard ]] juce::PopupMenu::Item newMenuItem ( const juce::String& name, const juce::String& icon, std::function<void ()> func );
 	[[ nodiscard ]] juce::PopupMenu::Item newDangerousMenuItem ( const juce::String& name, const juce::String& icon, std::function<void ()> func );
 
+	// Popup-menu boilerplate: build with newPopupMenu ( owner ), fill, then
+	// show with one of these; the deletion check on owner is always baked in
+	[[ nodiscard ]] juce::PopupMenu newPopupMenu ( juce::Component& owner );
+	void showMenuAtMouse ( juce::PopupMenu& m, juce::Component& owner );
+	void showMenuAtButton ( juce::PopupMenu& m, juce::Component& owner, juce::Component& anchor );
+
 	[[ nodiscard ]] std::pair<std::unique_ptr<juce::Drawable>, int> getSVG ( const juce::String& svgName );
 
 	// Feeds data-relative layout files to gin: the naked layout hands over real
