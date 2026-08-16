@@ -32,7 +32,7 @@ void GUI_Toggle::paintButton ( juce::Graphics& g, bool /*isHover*/, bool /*isDow
 	// Advance the animation by the wall time since it started
 	const auto	target = getToggleState () ? 1.0f : 0.0f;
 
-	if ( animPosition != target )
+	if ( ! juce::approximatelyEqual ( animPosition, target ) )
 	{
 		const auto	travelled = float ( ( juce::Time::getMillisecondCounterHiRes () - animStartTime ) / swingMs );
 
@@ -71,7 +71,7 @@ void GUI_Toggle::paintButton ( juce::Graphics& g, bool /*isHover*/, bool /*isDow
 
 	// Still moving: painting again next v-blank keeps the loop alive,
 	// arriving simply stops asking
-	if ( animPosition != target )
+	if ( ! juce::approximatelyEqual ( animPosition, target ) )
 		repaint ();
 }
 //----------------------------------------------------------------------------------
@@ -80,7 +80,7 @@ void GUI_Toggle::buttonStateChanged ()
 {
 	const auto	newState = getToggleState () ? 1.0f : 0.0f;
 
-	if ( newState == animPosition )
+	if ( juce::approximatelyEqual ( newState, animPosition ) )
 		return;
 
 	// Not visible = nothing to animate, snap
