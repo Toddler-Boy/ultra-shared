@@ -1,13 +1,17 @@
 #include "GUI_Toggle.h"
 
+#include "ultra-shared/Helpers/Easings.h"
 #include "UI/ui-colors.h"
 #include "ultra-shared/UI/UI_Helpers.h"
 
 //----------------------------------------------------------------------------------
 
-// A full 0-to-1 swing takes this long; a mid-flight reversal travels at the
-// same speed over the shorter distance
-constexpr auto	swingMs = 85.0;
+// A swing takes this long, whatever its distance. The knob's two edges ride
+// offset s-curves: the tail's spans the whole swing, the lead's is compressed
+// into its front by the stretch factor, the gap between them stretches the
+// knob mid-flight
+constexpr auto	swingMs = 160.0;
+constexpr auto	stretch = 1.0f;
 
 //----------------------------------------------------------------------------------
 
@@ -29,15 +33,16 @@ void GUI_Toggle::enablementChanged ()
 
 void GUI_Toggle::paintButton ( juce::Graphics& g, bool /*isHover*/, bool /*isDown*/ )
 {
-	// Advance the animation by the wall time since it started
+	// Advance both knob edges by the wall time since the flip
 	const auto	target = getToggleState () ? 1.0f : 0.0f;
+	const auto	arrived = juce::approximatelyEqual ( animLead, target ) && juce::approximatelyEqual ( animTail, target );
 
-	if ( ! juce::approximatelyEqual ( animPosition, target ) )
+	if ( ! arrived )
 	{
-		const auto	travelled = float ( ( juce::Time::getMillisecondCounterHiRes () - animStartTime ) / swingMs );
+		const auto	progress = float ( ( juce::Time::getMillisecondCounterHiRes () - animStartTime ) / swingMs );
 
-		animPosition = animStartPosition < target ? std::min ( target, animStartPosition + travelled )
-												  : std::max ( target, animStartPosition - travelled );
+		animLead = leadStart + ( target - leadStart ) * easing::smoothstep ( progress * ( 1.0f + stretch ) );
+		animTail = tailStart + ( target - tailStart ) * easing::smoothstep ( progress );
 	}
 
 	auto	b = getLocalBounds ().toFloat ();
@@ -47,31 +52,36 @@ void GUI_Toggle::paintButton ( juce::Graphics& g, bool /*isHover*/, bool /*isDow
 	// Checkbox
 	//
 	{
+		const auto	mid = ( animLead + animTail ) * 0.5f;
+
 		// Background
 		{
 			const auto	onCol = findColour ( UI::accent );
 			const auto	offCol = UI::getShade ( 0.0f );
 
-			g.setColour ( offCol.interpolatedWith ( onCol, animPosition * animPosition ) );
+			g.setColour ( offCol.interpolatedWith ( onCol, mid * mid ) );
 			g.fillRoundedRectangle ( b, b.getHeight () / 2.0f );
 		}
 
-		// Circle
+		// Knob, spanning its two edges: a circle at rest, a pill while moving
 		{
 			const auto	r = b.reduced ( b.getHeight () * 0.1f );
 
 			const auto	w = r.getHeight ();
-			const auto	circleBounds = r.withWidth ( w ).translated ( ( r.getWidth () - w ) * animPosition, 0.0f ).reduced ( 1.5f );
-			const auto	radius = circleBounds.getHeight () / 2.0f;
+			const auto	travel = r.getWidth () - w;
+			const auto	lo = std::min ( animLead, animTail );
+			const auto	hi = std::max ( animLead, animTail );
 
-			g.setColour ( UI::getShade ( animPosition * 0.7f + 0.3f ) );
-			g.fillRoundedRectangle ( circleBounds, radius );
+			const auto	knobBounds = r.withWidth ( w + travel * ( hi - lo ) ).translated ( travel * lo, 0.0f ).reduced ( 1.5f );
+
+			g.setColour ( UI::getShade ( mid * 0.7f + 0.3f ) );
+			g.fillRoundedRectangle ( knobBounds, knobBounds.getHeight () / 2.0f );
 		}
 	}
 
 	// Still moving: painting again next v-blank keeps the loop alive,
 	// arriving simply stops asking
-	if ( ! juce::approximatelyEqual ( animPosition, target ) )
+	if ( ! arrived )
 		repaint ();
 }
 //----------------------------------------------------------------------------------
@@ -80,18 +90,20 @@ void GUI_Toggle::buttonStateChanged ()
 {
 	const auto	newState = getToggleState () ? 1.0f : 0.0f;
 
-	if ( juce::approximatelyEqual ( newState, animPosition ) )
+	if ( juce::approximatelyEqual ( newState, animLead ) && juce::approximatelyEqual ( newState, animTail ) )
 		return;
 
 	// Not visible = nothing to animate, snap
 	if ( ! isShowing () )
 	{
-		animPosition = newState;
+		animLead = newState;
+		animTail = newState;
 		return;
 	}
 
-	// A mid-flight flip continues from where the knob is
-	animStartPosition = animPosition;
+	// A mid-flight flip continues from where the knob edges are
+	leadStart = animLead;
+	tailStart = animTail;
 	animStartTime = juce::Time::getMillisecondCounterHiRes ();
 
 	repaint ();
