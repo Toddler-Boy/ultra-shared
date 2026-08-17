@@ -28,6 +28,8 @@ public:
 	[[ nodiscard ]] int getNumBytesOfData () const;
 
 private:
+	[[ nodiscard ]] int getIndexFor ( int width, int height ) const;
+
 	std::vector<juce::Image>	images;
 };
 //-------------------------------------------------------------------------------------------------

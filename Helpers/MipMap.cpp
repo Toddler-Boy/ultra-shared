@@ -1,5 +1,7 @@
 #include <JuceHeader.h>
 
+#include <bit>
+
 #include "MipMap.h"
 //-----------------------------------------------------------------------------
 
@@ -75,7 +77,7 @@ void MipMap::setImage ( const juce::Image& src )
 	while ( halfImage.getWidth () > 16 && halfImage.getHeight () > 16 )
 	{
 		halfImage = reduceImageByHalf ( halfImage );
-		images.emplace_back ( std::move ( halfImage ) );
+		images.emplace_back ( halfImage );
 	}
 }
 //-------------------------------------------------------------------------------------------------
@@ -94,29 +96,21 @@ void MipMap::setImage ( const void* rawData, size_t numBytesOfData )
 
 void MipMap::draw ( juce::Graphics& g, juce::Rectangle<float> rc, juce::RectanglePlacement placement )
 {
-	if ( images.empty () )
-		return;
-
-	auto	img = &images[ 0 ];
-	if ( img->isNull () )
+	if ( images.empty () || images[ 0 ].isNull () )
 		return;
 
 	const auto	scale = g.getInternalContext ().getPhysicalPixelScaleFactor ();
-	const auto	mipRect = ( rc * scale ).toNearestInt ();
+	const auto	mipRect = ( rc * scale ).getSmallestIntegerContainer ();
 
-	for ( auto& i : images )
-		if ( i.getWidth () > mipRect.getWidth () && i.getHeight () > mipRect.getHeight () )
-			img = &i;
-		else
-			break;
+	const auto&	img = images[ size_t ( getIndexFor ( mipRect.getWidth (), mipRect.getHeight () ) ) ];
 
-	auto	quality =	( img->getWidth () == mipRect.getWidth () && img->getHeight () == mipRect.getHeight () ) ?
+	auto	quality =	( img.getWidth () == mipRect.getWidth () && img.getHeight () == mipRect.getHeight () ) ?
 							juce::Graphics::lowResamplingQuality
 							:
 							juce::Graphics::highResamplingQuality;
 
 	g.setImageResamplingQuality ( quality );
-	g.drawImage ( *img, rc, placement );
+	g.drawImage ( img, rc, placement );
 }
 //-------------------------------------------------------------------------------------------------
 
@@ -125,15 +119,21 @@ juce::Image MipMap::getImageFor ( const int width, const int height )
 	if ( images.empty () )
 		return {};
 
-	auto	img = &images[ 0 ];
+	return images[ size_t ( getIndexFor ( width, height ) ) ];
+}
+//-------------------------------------------------------------------------------------------------
 
-	for ( auto& i : images )
-		if ( i.getWidth () > width && i.getHeight () > height )
-			img = &i;
-		else
-			break;
+int MipMap::getIndexFor ( const int width, const int height ) const
+{
+	if ( width <= 0 || height <= 0 )
+		return int ( images.size () ) - 1;
 
-	return *img;
+	// level k is floor ( source / 2^k ), so the wanted level is floor ( log2 ( min ( ratios ) ) )
+	const auto	ratio = std::min ( images[ 0 ].getWidth () / width, images[ 0 ].getHeight () / height );
+	if ( ratio < 1 )
+		return 0;
+
+	return std::min ( std::bit_width ( unsigned ( ratio ) ) - 1, int ( images.size () ) - 1 );
 }
 //-------------------------------------------------------------------------------------------------
 
