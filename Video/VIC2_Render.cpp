@@ -436,83 +436,84 @@ void VIC2_Render::generateTextCRT ( const uint8_t bckColors, uint8_t textColor, 
 	std::fill_n ( screenBuffer, textColumns * textRows, 32 );
 	std::fill_n ( colorBuffer, textColumns * textRows, textColor );
 
-	// Place text
-	{
-		// Render C64 text with textColor
-
-		// Table for characters higher than 128
-		const static char*	asciiConversion =
-			"                "		// 0x80 - 0x8F
-			"               Y"		// 0x90 - 0x9F
-			" !  Y    <      "		// 0xA0 - 0xAF
-			"           >   ?"		// 0xB0 - 0xBF
-			"AAAAAAACEEEEIIII"		// 0xC0 - 0xCF
-			"DNOOOOOXOUUUUY S"		// 0xD0 - 0xDF
-			"AAAAAAACEEEEIIII"		// 0xE0 - 0xEF
-			"DNOOOOOXOUUUUY Y";		// 0xF0 - 0xFF
-
-		auto	txt = text;
-		int		x = 0;
-		int		y = 0;
-
-		// More text than the screen holds wraps back to the top rather than running
-		// off the end of the buffers
-		auto	nextLine = [ &x, &y ]
-		{
-			x = 0;
-			if ( ++y == textRows )
-				y = 0;
-		};
-
-		while ( auto z = uint8_t ( *txt++ ) )
-		{
-			// Next line
-			if ( z == '\n' )
-			{
-				nextLine ();
-				continue;
-			}
-
-			// New text color
-			if ( z < 16 )
-			{
-				textColor = z;
-				continue;
-			}
-
-			const auto	offset = y * textColumns + x;
-
-			// Cursor
-			if ( z == '`' )
-			{
-				screenBuffer[ offset ] = 160;
-				colorBuffer[ offset ] = textColor;
-			}
-			else if ( z != ' ' )
-			{
-				if ( z >= 0x80 )
-					z = asciiConversion[ z - 0x80 ] + 64;
-				else
-				{
-					// toUpper for ASCII
-					if ( z >= 'a' && z <= 'z' )
-						z -= ' ';
-
-					if ( z >= '@' )
-						z -= '@';
-				}
-
-				screenBuffer[ offset ] = z;
-				colorBuffer[ offset ] = textColor;
-			}
-
-			if ( ++x == textColumns )
-				nextLine ();
-		}
-	}
+	placeText ( 0, 0, textColor, text );
 
 	renderScreen ();
 	backupIndexBuffer ();
+}
+//-----------------------------------------------------------------------------
+
+void VIC2_Render::placeText ( int x, int y, uint8_t textColor, const char* text )
+{
+	// Render C64 text with textColor
+
+	// Table for characters higher than 128
+	const static char*	asciiConversion =
+		"                "		// 0x80 - 0x8F
+		"               Y"		// 0x90 - 0x9F
+		" !  Y    <      "		// 0xA0 - 0xAF
+		"           >   ?"		// 0xB0 - 0xBF
+		"AAAAAAACEEEEIIII"		// 0xC0 - 0xCF
+		"DNOOOOOXOUUUUY S"		// 0xD0 - 0xDF
+		"AAAAAAACEEEEIIII"		// 0xE0 - 0xEF
+		"DNOOOOOXOUUUUY Y";		// 0xF0 - 0xFF
+
+	auto	txt = text;
+
+	// More text than the screen holds wraps back to the top rather than running
+	// off the end of the buffers
+	auto	nextLine = [ &x, &y ]
+	{
+		x = 0;
+		if ( ++y == textRows )
+			y = 0;
+	};
+
+	while ( auto z = uint8_t ( *txt++ ) )
+	{
+		// Next line
+		if ( z == '\n' )
+		{
+			nextLine ();
+			continue;
+		}
+
+		// New text color
+		if ( z < 16 )
+		{
+			textColor = z;
+			continue;
+		}
+
+		const auto	offset = y * textColumns + x;
+
+		// Cursor
+		if ( z == '`' )
+		{
+			screenBuffer[ offset ] = 160;
+			colorBuffer[ offset ] = textColor;
+		}
+		else if ( z != ' ' )
+		{
+			if ( z >= 0x80 )
+				z = asciiConversion[ z - 0x80 ] + 64;
+			else
+			{
+				// toUpper for ASCII
+				if ( z >= 'a' && z <= 'z' )
+					z -= ' ';
+
+				if ( z >= '@' )
+					z -= '@';
+			}
+
+			screenBuffer[ offset ] = z;
+			colorBuffer[ offset ] = textColor;
+		}
+
+		if ( ++x == textColumns )
+			nextLine ();
+	}
 }
 //-----------------------------------------------------------------------------
 

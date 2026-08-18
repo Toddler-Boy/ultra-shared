@@ -92,6 +92,10 @@ public:
 	// Image gets generated from text
 	void generateTextCRT ( const uint8_t bckColors, uint8_t textColor, const char* text );
 
+	// Write text into the screen/color buffers without rendering: '\n' starts
+	// a new line, bytes below 16 switch the text color, '`' is the cursor block
+	void placeText ( int x, int y, uint8_t textColor, const char* text );
+
 	// Create images for CRT-emulation and thumbnail
 	void setSettings ( const settings& set );
 	void renderCRT ();
