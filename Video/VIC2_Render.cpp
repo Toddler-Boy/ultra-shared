@@ -448,25 +448,10 @@ VIC2_Render::renderStats VIC2_Render::renderScreen ()
 	prevCharset = customCharset;
 	renderCacheValid = true;
 
-	return { full, full || borderPainted || cellsDrawn };
-}
-//-----------------------------------------------------------------------------
-
-void VIC2_Render::generateTextCRT ( const uint8_t bckColors, uint8_t textColor, const char* text )
-{
-	// High-res image
+	// A rendered text screen fills the full picture, border included
 	indexBufferWidth = outerUnscaledWidth;
 
-	screenCol = bckColors & 0xF;
-	borderCol = bckColors >> 4;
-
-	std::fill_n ( screenBuffer, textColumns * textRows, 32 );
-	std::fill_n ( colorBuffer, textColumns * textRows, textColor );
-
-	placeText ( 0, 0, textColor, text );
-
-	renderScreen ();
-	backupIndexBuffer ();
+	return { full, full || borderPainted || cellsDrawn };
 }
 //-----------------------------------------------------------------------------
 
