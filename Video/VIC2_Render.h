@@ -45,6 +45,7 @@ public:
 
 	uint8_t		chargen[ 4096 ];
 	uint64_t	bitsToBytes[ 256 ];
+	uint64_t	colorMasks[ 16 ];		// the palette index spread over 8 bytes
 };
 //-----------------------------------------------------------------------------
 
@@ -63,8 +64,15 @@ public:
 	// Image is pure PETSCII, 40x25 characters, plus color buffer, border and screen colors and a control-byte (upper- or lower-case)
 	[[ nodiscard ]] bool loadPETSCII ( const char* filename );
 
-	// Convert screen- and color-buffers, etc. to an index buffer
-	void renderScreen ();
+	// Convert screen- and color-buffers, etc. to an index buffer. A full pass
+	// repaints over any pixel overlays; changed says whether any pixel moved
+	struct renderStats
+	{
+		bool	full = false;
+		bool	changed = false;
+	};
+
+	renderStats renderScreen ();
 
 	struct settings
 	{
@@ -102,11 +110,18 @@ public:
 	// order); nullptr restores the ROM. The caller keeps the bits alive
 	void setCustomCharset ( const uint8_t* bits )	{	customCharset = bits;	}
 
+	// renderScreen only redraws cells whose character or color changed; force
+	// a full pass when the index buffer was written outside of it
+	void invalidate ()	{	renderCacheValid = false;	}
+
 	// Create images for CRT-emulation and thumbnail
 	void setSettings ( const settings& set );
 	void renderCRT ();
 
 	[[ nodiscard ]] juce::Image& getCRT () { return indexBuffer; }
+
+	// The index buffer's pixels; the software image's data never moves
+	[[ nodiscard ]] uint8_t* getIndexPixels ()	{	return indexPixels;	}
 	[[ nodiscard ]] juce::Image getThumbnail ();
 	[[ nodiscard ]] bool wasBorderFilled () const;
 
@@ -160,8 +175,18 @@ private:
 
 	const uint8_t*			customCharset = nullptr;
 
+	// The state of the last renderScreen pass, for the dirty-cell check
+	uint8_t			prevScreenBuffer[ textColumns * textRows ];
+	uint8_t			prevColorBuffer[ textColumns * textRows ];
+	uint8_t			prevScreenCol = 0;
+	uint8_t			prevBorderCol = 0;
+	uint8_t			prevControlByte = 0;
+	const uint8_t*	prevCharset = nullptr;
+	bool			renderCacheValid = false;
+
 	int						indexBufferWidth = 0;
 	juce::Image				indexBuffer;
+	uint8_t*				indexPixels = nullptr;
 	juce::Image				yuvBuffer;
 	juce::Image				rgbBuffer;
 

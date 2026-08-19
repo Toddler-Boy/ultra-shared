@@ -17,6 +17,8 @@ VIC2_Render::VIC2_Render ( const bool withBackup )
 	yuvBuffer = juce::Image ( juce::Image::ARGB, outerUnscaledWidth, outerUnscaledHeight, false, juce::SoftwareImageType () );
 	rgbBuffer = juce::Image ( juce::Image::ARGB, outerUnscaledWidth, outerUnscaledHeight, false, juce::SoftwareImageType () );
 
+	indexPixels = (uint8_t*)juce::Image::BitmapData ( indexBuffer, juce::Image::BitmapData::ReadWriteMode::writeOnly ).data;
+
 	if ( withBackup )
 		indexBufferBackup.resize ( outerUnscaledLength );
 }
@@ -55,7 +57,7 @@ bool VIC2_Render::loadImage ( const char* filename, const void* data, const size
 
 void VIC2_Render::fillBorder ()
 {
-	auto	dst = (uint8_t*)juce::Image::BitmapData ( indexBuffer, juce::Image::BitmapData::ReadWriteMode::writeOnly ).data;
+	auto	dst = indexPixels;
 
 	// Fill top-border
 	std::fill_n ( dst, outerUnscaledWidth * unscaledBorderSizeY, borderCol );
@@ -80,9 +82,7 @@ void VIC2_Render::fillBorder ()
 void VIC2_Render::fillAll ( const uint8_t innerCol )
 {
 	// Fill background with one color
-	auto	dst = (uint8_t*)juce::Image::BitmapData ( indexBuffer, juce::Image::BitmapData::ReadWriteMode::writeOnly ).data;
-
-	std::fill_n ( dst, outerUnscaledLength, innerCol );
+	std::fill_n ( indexPixels, outerUnscaledLength, innerCol );
 }
 //-----------------------------------------------------------------------------
 
@@ -230,7 +230,8 @@ bool VIC2_Render::convertTrueColor ( const char* filename, const uint32_t* rawDa
 		}
 	}
 
-	// End of conversion
+	// End of conversion; the image replaced whatever renderScreen drew
+	invalidate ();
 	indexBufferWidth = width;
 
 	findBorderColor ( filename );
@@ -315,7 +316,8 @@ bool VIC2_Render::convertPaletted ( const char* filename, const pngloader::image
 		}
 	}
 
-	// End of conversion
+	// End of conversion; the image replaced whatever renderScreen drew
+	invalidate ();
 	indexBufferWidth = img.width;
 
 	findBorderColor ( filename );
@@ -364,36 +366,41 @@ bool VIC2_Render::loadPETSCII ( const char* filename )
 }
 //-----------------------------------------------------------------------------
 
-void VIC2_Render::renderScreen ()
+VIC2_Render::renderStats VIC2_Render::renderScreen ()
 {
-	// Border and screen colors
-	fillAll ( screenCol );
-	if ( screenCol != borderCol )
+	// Anything but a cell change forces the full pass
+	const auto	full = ! renderCacheValid
+					|| screenCol != prevScreenCol
+					|| controlByte != prevControlByte
+					|| customCharset != prevCharset;
+
+	// Background only on a full pass (which covers the border too), the
+	// border alone when its color changed; overlays erase themselves
+	if ( full )
+		fillAll ( screenCol );
+
+	auto	borderPainted = false;
+	if ( full ? borderCol != screenCol : borderCol != prevBorderCol )
+	{
 		fillBorder ();
+		borderPainted = true;
+	}
 
 	const auto	lowerCase = ( controlByte >> 1 ) & 0x1;
 
 	// Chargen offset; a custom charset carries its full 2KB set
 	auto	characterRom = customCharset ? customCharset : characterData->chargen + lowerCase * 0x800;
-	auto	srcDst = (uint8_t*)juce::Image::BitmapData ( indexBuffer, juce::Image::BitmapData::ReadWriteMode::writeOnly ).data;
 
 	auto	offset = 0;
-	auto	dst = reinterpret_cast<uint64_t*> ( srcDst + ( outerUnscaledWidth * unscaledBorderSizeY + unscaledBorderSizeX ) );
+	auto	dst = reinterpret_cast<uint64_t*> ( indexPixels + ( outerUnscaledWidth * unscaledBorderSizeY + unscaledBorderSizeX ) );
 
 	constexpr auto	dstRowLength = outerUnscaledWidth / 8;
 	constexpr auto	rowSkip = unscaledBorderSizeX / 4 + dstRowLength * 7;
 	const auto&		bitsToBytes = characterData->bitsToBytes;
+	const auto&		colorMasks = characterData->colorMasks;
 
-	auto getColMask = [] ( const uint8_t color )
-	{
-		auto	col = uint64_t ( color & 0xF );
-		col |= col << 8;
-		col |= col << 16;
-		col |= col << 32;
-		return col;
-	};
-
-	const auto	bckCol = getColMask ( screenCol );
+	const auto	bckCol = colorMasks[ screenCol & 0xF ];
+	auto		cellsDrawn = false;
 
 	for ( auto y = 0; y < 25; ++y )
 	{
@@ -401,10 +408,19 @@ void VIC2_Render::renderScreen ()
 		{
 			const auto	character = screenBuffer[ offset ];
 
-			// Space
-			if ( character != 32 )
+			// A full pass skips spaces (the background fill covers them), the
+			// dirty pass skips unchanged cells and draws everything else -
+			// including spaces, whose blank glyph restores the background
+			const auto	skip = full
+							 ? character == 32
+							 : character == prevScreenBuffer[ offset ]
+							   && ( character == 32 || colorBuffer[ offset ] == prevColorBuffer[ offset ] );
+
+			if ( ! skip )
 			{
-				const auto	color = getColMask ( colorBuffer[ offset ] & 0xF );
+				cellsDrawn = true;
+
+				const auto	color = colorMasks[ colorBuffer[ offset ] & 0xF ];
 				const auto	src = characterRom + ( character << 3 );
 
 				auto	row = bitsToBytes[ src[ 0 ] ];			dst[ 0				  ] = ( row & color ) | ( ( ~row ) & bckCol );
@@ -422,6 +438,17 @@ void VIC2_Render::renderScreen ()
 		}
 		dst += rowSkip;
 	}
+
+	std::copy_n ( screenBuffer, textColumns * textRows, prevScreenBuffer );
+	std::copy_n ( colorBuffer, textColumns * textRows, prevColorBuffer );
+
+	prevScreenCol = screenCol;
+	prevBorderCol = borderCol;
+	prevControlByte = controlByte;
+	prevCharset = customCharset;
+	renderCacheValid = true;
+
+	return { full, full || borderPainted || cellsDrawn };
 }
 //-----------------------------------------------------------------------------
 
@@ -714,9 +741,7 @@ void VIC2_Render::backupIndexBuffer ()
 	if ( indexBufferBackup.empty () )
 		return;
 
-	auto	src = (uint8_t*)juce::Image::BitmapData ( indexBuffer, juce::Image::BitmapData::ReadWriteMode::readOnly ).data;
-
-	std::copy_n ( src, outerUnscaledLength, indexBufferBackup.data () );
+	std::copy_n ( indexPixels, outerUnscaledLength, indexBufferBackup.data () );
 }
 //-----------------------------------------------------------------------------
 
@@ -725,9 +750,7 @@ void VIC2_Render::restoreIndexBuffer ()
 	if ( indexBufferBackup.empty () )
 		return;
 
-	auto	dst = (uint8_t*)juce::Image::BitmapData ( indexBuffer, juce::Image::BitmapData::ReadWriteMode::writeOnly ).data;
-
-	std::copy_n ( indexBufferBackup.data (), outerUnscaledLength, dst);
+	std::copy_n ( indexBufferBackup.data (), outerUnscaledLength, indexPixels );
 }
 //-----------------------------------------------------------------------------
 
@@ -773,6 +796,17 @@ VIC2_Render_Data::VIC2_Render_Data ()
 
 			bitsToBytes[ charData ] = result;
 		}
+	}
+
+	// Pre-spread every palette index over 8 bytes
+	for ( auto index = 0; index < 16; ++index )
+	{
+		auto	mask = uint64_t ( index );
+		mask |= mask << 8;
+		mask |= mask << 16;
+		mask |= mask << 32;
+
+		colorMasks[ index ] = mask;
 	}
 }
 //-----------------------------------------------------------------------------
