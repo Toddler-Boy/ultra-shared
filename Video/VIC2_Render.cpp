@@ -373,8 +373,8 @@ void VIC2_Render::renderScreen ()
 
 	const auto	lowerCase = ( controlByte >> 1 ) & 0x1;
 
-	// Chargen offset
-	auto	characterRom = characterData->chargen + lowerCase * 0x800;
+	// Chargen offset; a custom charset carries its full 2KB set
+	auto	characterRom = customCharset ? customCharset : characterData->chargen + lowerCase * 0x800;
 	auto	srcDst = (uint8_t*)juce::Image::BitmapData ( indexBuffer, juce::Image::BitmapData::ReadWriteMode::writeOnly ).data;
 
 	auto	offset = 0;
@@ -497,6 +497,14 @@ void VIC2_Render::placeText ( int x, int y, uint8_t textColor, const char* text 
 		{
 			if ( z >= 0x80 )
 				z = asciiConversion[ z - 0x80 ] + 64;
+			else if ( ( controlByte >> 1 ) & 0x1 )
+			{
+				// Shifted charset: lowercase at 1-26, uppercase stays at 65-90
+				if ( z >= 'a' && z <= 'z' )
+					z -= 96;
+				else if ( z == '@' || ( z >= '[' && z <= '_' ) )
+					z -= '@';
+			}
 			else
 			{
 				// toUpper for ASCII

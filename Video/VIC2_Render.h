@@ -93,8 +93,14 @@ public:
 	void generateTextCRT ( const uint8_t bckColors, uint8_t textColor, const char* text );
 
 	// Write text into the screen/color buffers without rendering: '\n' starts
-	// a new line, bytes below 16 switch the text color, '`' is the cursor block
+	// a new line, bytes below 16 switch the text color, '`' is the cursor block.
+	// The shifted charset (controlByte) keeps the ASCII case, the unshifted one
+	// folds to uppercase
 	void placeText ( int x, int y, uint8_t textColor, const char* text );
+
+	// Replace the ROM chargen with a custom 2KB set (256 glyphs, screen-code
+	// order); nullptr restores the ROM. The caller keeps the bits alive
+	void setCustomCharset ( const uint8_t* bits )	{	customCharset = bits;	}
 
 	// Create images for CRT-emulation and thumbnail
 	void setSettings ( const settings& set );
@@ -151,6 +157,8 @@ private:
 	void convertToRGB ();
 
 	settings	set;
+
+	const uint8_t*			customCharset = nullptr;
 
 	int						indexBufferWidth = 0;
 	juce::Image				indexBuffer;
