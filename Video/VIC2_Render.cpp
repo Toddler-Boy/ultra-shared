@@ -1,6 +1,7 @@
 #include <JuceHeader.h>
 
 #include <bit>
+#include <cstring>
 #include <numbers>
 
 #include "ultra-shared/Config/DataSource.h"
@@ -404,6 +405,17 @@ VIC2_Render::renderStats VIC2_Render::renderScreen ()
 
 	for ( auto y = 0; y < 25; ++y )
 	{
+		// Unchanged rows skip wholesale: the common nothing-changed frame is
+		// two compares per row instead of forty branchy cells
+		if ( ! full
+			 && std::memcmp ( screenBuffer + offset, prevScreenBuffer + offset, textColumns ) == 0
+			 && std::memcmp ( colorBuffer + offset, prevColorBuffer + offset, textColumns ) == 0 )
+		{
+			offset += textColumns;
+			dst += textColumns + rowSkip;
+			continue;
+		}
+
 		for ( auto x = 0; x < 40; ++x )
 		{
 			const auto	character = screenBuffer[ offset ];
@@ -420,17 +432,17 @@ VIC2_Render::renderStats VIC2_Render::renderScreen ()
 			{
 				cellsDrawn = true;
 
-				const auto	color = colorMasks[ colorBuffer[ offset ] & 0xF ];
+				const auto	colorXor = colorMasks[ colorBuffer[ offset ] & 0xF ] ^ bckCol;
 				const auto	src = characterRom + ( character << 3 );
 
-				auto	row = bitsToBytes[ src[ 0 ] ];			dst[ 0				  ] = ( row & color ) | ( ( ~row ) & bckCol );
-						row = bitsToBytes[ src[ 1 ] ];			dst[ dstRowLength	  ] = ( row & color ) | ( ( ~row ) & bckCol );
-						row = bitsToBytes[ src[ 2 ] ];			dst[ dstRowLength * 2 ] = ( row & color ) | ( ( ~row ) & bckCol );
-						row = bitsToBytes[ src[ 3 ] ];			dst[ dstRowLength * 3 ] = ( row & color ) | ( ( ~row ) & bckCol );
-						row = bitsToBytes[ src[ 4 ] ];			dst[ dstRowLength * 4 ] = ( row & color ) | ( ( ~row ) & bckCol );
-						row = bitsToBytes[ src[ 5 ] ];			dst[ dstRowLength * 5 ] = ( row & color ) | ( ( ~row ) & bckCol );
-						row = bitsToBytes[ src[ 6 ] ];			dst[ dstRowLength * 6 ] = ( row & color ) | ( ( ~row ) & bckCol );
-						row = bitsToBytes[ src[ 7 ] ];			dst[ dstRowLength * 7 ] = ( row & color ) | ( ( ~row ) & bckCol );
+				auto	row = bitsToBytes[ src[ 0 ] ];			dst[ 0				  ] = bckCol ^ ( row & colorXor );
+						row = bitsToBytes[ src[ 1 ] ];			dst[ dstRowLength	  ] = bckCol ^ ( row & colorXor );
+						row = bitsToBytes[ src[ 2 ] ];			dst[ dstRowLength * 2 ] = bckCol ^ ( row & colorXor );
+						row = bitsToBytes[ src[ 3 ] ];			dst[ dstRowLength * 3 ] = bckCol ^ ( row & colorXor );
+						row = bitsToBytes[ src[ 4 ] ];			dst[ dstRowLength * 4 ] = bckCol ^ ( row & colorXor );
+						row = bitsToBytes[ src[ 5 ] ];			dst[ dstRowLength * 5 ] = bckCol ^ ( row & colorXor );
+						row = bitsToBytes[ src[ 6 ] ];			dst[ dstRowLength * 6 ] = bckCol ^ ( row & colorXor );
+						row = bitsToBytes[ src[ 7 ] ];			dst[ dstRowLength * 7 ] = bckCol ^ ( row & colorXor );
 			}
 
 			++dst;
