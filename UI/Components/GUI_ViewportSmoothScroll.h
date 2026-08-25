@@ -3,14 +3,13 @@
 #include <JuceHeader.h>
 
 //-------------------------------------------------------------------------------------------------
-// Browser-style wheel scrolling for a Viewport or ListBox: the viewport consumes wheel events
-// before any listener runs and jumps a whole step, but paints later: the jump is rewound here
-// invisibly, replaced by a per-frame glide.
+// Browser-style wheel scrolling for a Viewport or ListBox, the viewport's whole-step wheel
+// jump is rewound before it paints and replaced by a per-frame glide
 
 class GUI_ViewportSmoothScroll final : public juce::MouseListener
 {
 public:
-	// A bare viewport's native step is small, so it defaults to twice the travel
+	// Bare viewport steps are small, default to twice the travel
 	explicit GUI_ViewportSmoothScroll ( juce::Viewport& viewport, const float speedFactor = 2.0f ) : GUI_ViewportSmoothScroll ( viewport, viewport, speedFactor ) {}
 	explicit GUI_ViewportSmoothScroll ( juce::ListBox& lb, const float speedFactor = 1.0f ) : GUI_ViewportSmoothScroll ( lb, *lb.getViewport (), speedFactor ) {}
 
@@ -30,14 +29,10 @@ public:
 
 		const auto&	scrollBar = vp.getVerticalScrollBar ();
 
-		// The event's own position is measured against a row component that may have been
-		// scrolled or recycled earlier in this same dispatch; the input source holds the
-		// pointer's true position
+		// The event's position is measured against a possibly recycled row, the source has the truth
 		const auto	screenPos = e.source.getScreenPosition ().roundToInt ();
 
-		// Wheels outside the viewport (a list header) or over the scrollbar scroll
-		// asynchronously through the scrollbar; only the viewport's own instant response
-		// is replaced here
+		// Header and scrollbar wheels scroll asynchronously via the scrollbar, leave them alone
 		if ( ! vp.getScreenBounds ().contains ( screenPos )
 			|| ( scrollBar.isVisible () && scrollBar.getScreenBounds ().contains ( screenPos ) ) )
 			return;
@@ -49,11 +44,8 @@ public:
 		const auto	step = std::max ( 1.0f, float ( scrollBar.getSingleStepSize () ) );
 		const auto	viewY = float ( vp.getViewPositionY () );
 
-		// The viewport has already jumped a whole step but nothing has painted yet; while
-		// resting, position tracked the view up to the last frame, so if it lies within one
-		// step against the wheel direction it is the jump's origin: rewind there invisibly.
-		// Anything else (stale after a long-hidden window, a simultaneous external scroll)
-		// starts from the view as it stands
+		// The viewport already jumped a whole step, nothing painted yet: rewind to the tracked
+		// position if it plausibly is the jump's origin, else start from the view as it stands
 		if ( ! animating )
 		{
 			const auto	jumped = viewY - position;
@@ -67,8 +59,7 @@ public:
 			animating = true;
 		}
 
-		// A wheel against the remaining glide restarts from the current position, so a
-		// direction change bites immediately instead of unwinding leftover travel
+		// Wheeling against the remaining glide restarts here, direction changes bite immediately
 		const auto	delta = -wheel.deltaY * wheelDistance * step * speed;
 		if ( ( target - position ) * delta < 0.0f )
 			target = position;
@@ -79,7 +70,7 @@ public:
 	}
 
 private:
-	// Travel per wheel unit matches the viewport's native step; ease-out reaches ~95% in 0.25 s
+	// Native-step travel per wheel unit, ease-out covers ~95% of the way in 0.25 s
 	static constexpr auto	wheelDistance = 14.0f;
 	static constexpr auto	easeRate = 12.0f;
 
