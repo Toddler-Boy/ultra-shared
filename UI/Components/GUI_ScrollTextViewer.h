@@ -2,6 +2,8 @@
 
 #include <JuceHeader.h>
 
+#include "ultra-shared/UI/Components/GUI_ViewportSmoothScroll.h"
+
 //-----------------------------------------------------------------------------
 
 // Row-culled text renderer for large scrollable documents; lines containing a
@@ -47,6 +49,7 @@ public:
 private:
 	juce::Viewport	viewport;
 		GUI_LargeTextView	textRenderer;
+	GUI_ViewportSmoothScroll	smoothScroll { viewport };
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR ( GUI_ScrollTextViewer )
 };

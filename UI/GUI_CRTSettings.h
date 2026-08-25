@@ -7,6 +7,7 @@
 #include "ultra-shared/Resources/Icons.h"
 #include "ultra-shared/Resources/Strings.h"
 #include "ultra-shared/UI/Components/GUI_PresetSaveDialog.h"
+#include "ultra-shared/UI/Components/GUI_ViewportSmoothScroll.h"
 #include "ultra-shared/Video/VIC2_Render.h"
 
 //-----------------------------------------------------------------------------
@@ -75,6 +76,7 @@ private:
 
 	juce::Viewport	settingsViewport { "viewport" };
 	juce::Component	settingsContent { "content" };
+	GUI_ViewportSmoothScroll	smoothScroll { settingsViewport };
 
 	GUI_PresetSaveDialog	presetSaveDialog;
 
