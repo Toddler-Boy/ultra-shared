@@ -51,8 +51,9 @@ namespace
 	//-----------------------------------------------------------------------------
 
 	// The lime shader stack reads the CRT data through its content hook: the
-	// nominal files it builds under getCRTRoot () map straight onto pak
-	// entries; anything outside the data folder falls through to the disk.
+	// nominal files it builds under getCRTRoot () resolve through datasource
+	// (pak entries or the naked trees); anything outside the data folder
+	// falls through to the disk.
 	// User CRT content merges in here: a folder in user/Overlays shadows the
 	// factory overlay of the same name whole, a png in user/CRT Masks shadows
 	// (or adds) a single mask
@@ -250,8 +251,9 @@ namespace
 		{
 			auto	st = resolve ();
 
-			if ( st.pak && st.pakFile.isValid () )
-				installLimeContentLoader ( st.folder );
+			// Every mode: user CRT content is user data, it merges over the
+			// factory set no matter where that comes from
+			installLimeContentLoader ( st.folder );
 
 			return st;
 		} ();

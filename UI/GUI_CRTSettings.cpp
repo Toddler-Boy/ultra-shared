@@ -582,8 +582,7 @@ void GUI_CRTSettings::connectComponents ()
 //-----------------------------------------------------------------------------
 
 // Factory names come from datasource directly (never the merged loader view),
-// user names from the real user folders - pak mode only, dev mode has no
-// loader to serve them
+// user names from the real user folders
 static juce::StringArray factoryOverlayNames ()
 {
 	juce::StringArray	out;
@@ -601,9 +600,6 @@ static juce::StringArray factoryOverlayNames ()
 static juce::StringArray userOverlayNames ()
 {
 	juce::StringArray	out;
-
-	if ( ! datasource::isPak () )
-		return out;
 
 	if ( const auto root = filepaths::getUserOverlaysPath (); root != juce::File () )
 		for ( const auto& f : root.findChildFiles ( juce::File::findDirectories | juce::File::ignoreHiddenFiles, false ) )
@@ -632,9 +628,6 @@ static juce::StringArray factoryMaskNames ()
 static juce::StringArray userMaskNames ()
 {
 	juce::StringArray	out;
-
-	if ( ! datasource::isPak () )
-		return out;
 
 	if ( const auto root = filepaths::getUserCRTMasksPath (); root != juce::File () )
 		for ( const auto& f : root.findChildFiles ( juce::File::findFiles | juce::File::ignoreHiddenFiles, false, "*.png" ) )
