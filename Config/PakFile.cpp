@@ -1,5 +1,7 @@
 #include "ultra-shared/Config/PakFile.h"
 
+#include <algorithm>
+
 //-----------------------------------------------------------------------------
 
 namespace
@@ -7,6 +9,7 @@ namespace
 	// The little-endian readers work on any alignment
 	[[ nodiscard ]] uint32_t u16 ( const uint8_t* p )	{	return uint32_t ( p[ 0 ] ) | uint32_t ( p[ 1 ] ) << 8;	}
 	[[ nodiscard ]] uint32_t u32 ( const uint8_t* p )	{	return uint32_t ( p[ 0 ] ) | uint32_t ( p[ 1 ] ) << 8 | uint32_t ( p[ 2 ] ) << 16 | uint32_t ( p[ 3 ] ) << 24;	}
+	[[ nodiscard ]] uint64_t u64 ( const uint8_t* p )	{	return uint64_t ( u32 ( p ) ) | uint64_t ( u32 ( p + 4 ) ) << 32;	}
 
 	[[ nodiscard ]] std::string lowerKey ( const juce::String& path )
 	{
@@ -25,22 +28,25 @@ namespace
 
 	struct EOCD
 	{
-		int			numEntries = 0;
-		juce::int64	cdSize = 0;
-		juce::int64	cdOffset = 0;
-		juce::int64	base = 0;	// Bytes in front of the zip: the host exe when appended
+		int64_t		numEntries = 0;
+		int64_t		cdSize = 0;
+		int64_t		cdOffset = 0;
+		int64_t		base = 0;	// Bytes in front of the zip: the host exe when appended
 	};
 
 	// End-of-central-directory record: 22 fixed bytes plus an optional comment
 	// of up to 64K, found by scanning backwards for its signature. A candidate
 	// only counts when its geometry fits the file, so stray signature bytes in
 	// code or in the Authenticode blob a signed exe carries behind the real
-	// record get skipped. 0xFFFF/0xFFFFFFFF mean zip64, which nothing on our
-	// side produces
+	// record get skipped. 0xFFFF/0xFFFFFFFF are zip64 sentinels: the real
+	// numbers then sit in the zip64 record in front of the locator
 	[[ nodiscard ]] bool findEOCD ( juce::FileInputStream& in, EOCD& out )
 	{
 		const auto	fileSize = in.getTotalLength ();
-		const auto	tailSize = juce::jmin ( fileSize, juce::int64 ( 65557 ) );
+
+		// Worst case: zip64 record + locator (76 bytes) in front of an EOCD
+		// carrying a maximum-length comment
+		const auto	tailSize = std::min ( fileSize, int64_t ( 65633 ) );
 		if ( tailSize < 22 )
 			return false;
 
@@ -56,12 +62,30 @@ namespace
 			if ( u32 ( t + i ) != 0x06054b50 )
 				continue;
 
-			const auto	numEntries = int ( u16 ( t + i + 10 ) );
-			const auto	cdSize = juce::int64 ( u32 ( t + i + 12 ) );
-			const auto	cdOffset = juce::int64 ( u32 ( t + i + 16 ) );
+			const auto	numEntries = int64_t ( u16 ( t + i + 10 ) );
+			const auto	cdSize = int64_t ( u32 ( t + i + 12 ) );
+			const auto	cdOffset = int64_t ( u32 ( t + i + 16 ) );
 
-			if ( numEntries == 0xFFFF || cdOffset == 0xFFFFFFFF )
-				continue;
+			if ( numEntries == 0xFFFF || cdSize == 0xFFFFFFFF || cdOffset == 0xFFFFFFFF )
+			{
+				// zip64: the 20-byte locator and the 56-byte record precede
+				// the classic one
+				if ( i < 76 || u32 ( t + i - 20 ) != 0x07064b50 || u32 ( t + i - 76 ) != 0x06064b50 )
+					continue;
+
+				const auto	z = t + i - 76;
+				const auto	numEntries64 = int64_t ( u64 ( z + 32 ) );
+				const auto	cdSize64 = int64_t ( u64 ( z + 40 ) );
+				const auto	cdOffset64 = int64_t ( u64 ( z + 48 ) );
+
+				// The central directory ends where the zip64 record starts
+				const auto	base = ( fileSize - tailSize + i - 76 ) - cdSize64 - cdOffset64;
+				if ( base < 0 )
+					continue;
+
+				out = { numEntries64, cdSize64, cdOffset64, base };
+				return true;
+			}
 
 			// The central directory ends right where the record starts; its
 			// distance to the zip-relative offset it claims is the host size
@@ -83,6 +107,7 @@ bool PakFile::open ( const juce::File& _pakFile )
 	pakFile = _pakFile;
 	entries.clear ();
 	lookup.clear ();
+	numUnsupported = 0;
 
 	juce::FileInputStream	in ( pakFile );
 	if ( ! in.openedOk () )
@@ -113,7 +138,7 @@ bool PakFile::open ( const juce::File& _pakFile )
 	lookup.reserve ( size_t ( numEntries ) );
 
 	juce::int64	pos = 0;
-	for ( auto i = 0; i < numEntries; ++i )
+	for ( int64_t i = 0; i < numEntries; ++i )
 	{
 		if ( pos + 46 > cdSize || u32 ( d + pos ) != 0x02014b50 )
 		{
@@ -124,14 +149,44 @@ bool PakFile::open ( const juce::File& _pakFile )
 		}
 
 		const auto	method = int ( u16 ( d + pos + 10 ) );
-		const auto	compressedSize = juce::int64 ( u32 ( d + pos + 20 ) );
-		const auto	uncompressedSize = juce::int64 ( u32 ( d + pos + 24 ) );
+		const auto	dosDateTime = u32 ( d + pos + 12 );
+		const auto	crc = u32 ( d + pos + 16 );
+		auto		compressedSize = int64_t ( u32 ( d + pos + 20 ) );
+		auto		uncompressedSize = int64_t ( u32 ( d + pos + 24 ) );
 		const auto	nameLen = int ( u16 ( d + pos + 28 ) );
 		const auto	extraLen = int ( u16 ( d + pos + 30 ) );
 		const auto	commentLen = int ( u16 ( d + pos + 32 ) );
-		const auto	headerOffset = juce::int64 ( u32 ( d + pos + 42 ) );
+		auto		headerOffset = int64_t ( u32 ( d + pos + 42 ) );
 
 		const auto	path = juce::String::fromUTF8 ( reinterpret_cast<const char*> ( d + pos + 46 ), nameLen );
+
+		// Sentinel fields carry their real number in the zip64 extra field:
+		// 64-bit values in fixed order, present per sentinel
+		if ( compressedSize == 0xFFFFFFFF || uncompressedSize == 0xFFFFFFFF || headerOffset == 0xFFFFFFFF )
+		{
+			auto		e = d + pos + 46 + nameLen;
+			const auto	extraEnd = e + extraLen;
+
+			while ( e + 4 <= extraEnd )
+			{
+				const auto	fieldSize = int ( u16 ( e + 2 ) );
+				auto		v = e + 4;
+				const auto	fieldEnd = v + fieldSize;
+
+				if ( fieldEnd > extraEnd )
+					break;
+
+				if ( u16 ( e ) == 0x0001 )
+				{
+					if ( uncompressedSize == 0xFFFFFFFF && v + 8 <= fieldEnd )	{	uncompressedSize = int64_t ( u64 ( v ) );	v += 8;	}
+					if ( compressedSize == 0xFFFFFFFF && v + 8 <= fieldEnd )	{	compressedSize = int64_t ( u64 ( v ) );		v += 8;	}
+					if ( headerOffset == 0xFFFFFFFF && v + 8 <= fieldEnd )		{	headerOffset = int64_t ( u64 ( v ) );	}
+					break;
+				}
+
+				e = fieldEnd;
+			}
+		}
 
 		pos += 46 + nameLen + extraLen + commentLen;
 
@@ -142,11 +197,12 @@ bool PakFile::open ( const juce::File& _pakFile )
 		if ( method != 0 && method != 8 )
 		{
 			Z_ERR ( "Unsupported compression on " << path << " in " << pakFile.getFullPathName () );
+			++numUnsupported;
 			continue;
 		}
 
 		lookup[ lowerKey ( path ) ] = entries.size ();
-		entries.push_back ( { path, eocd.base + headerOffset, compressedSize, uncompressedSize, method == 8 } );
+		entries.push_back ( { path, eocd.base + headerOffset, compressedSize, uncompressedSize, crc, dosDateTime, method == 8 } );
 	}
 
 	return isValid ();
@@ -173,6 +229,18 @@ const PakFile::Entry* PakFile::find ( const juce::String& path ) const
 bool PakFile::exists ( const juce::String& path ) const
 {
 	return find ( path ) != nullptr;
+}
+//-----------------------------------------------------------------------------
+
+bool PakFile::folderExists ( const juce::String& prefix ) const
+{
+	const auto	pre = normalizedPrefix ( prefix );
+
+	for ( const auto& e : entries )
+		if ( e.path.startsWithIgnoreCase ( pre ) )
+			return true;
+
+	return false;
 }
 //-----------------------------------------------------------------------------
 

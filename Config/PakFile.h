@@ -2,18 +2,31 @@
 
 #include <JuceHeader.h>
 
+#include <cstdint>
 #include <unordered_map>
 #include <vector>
 
 //-----------------------------------------------------------------------------
 
-// Read-only access to Data.pak (a plain zip by another name). The central
-// directory is parsed once up front; after that every access opens its own
-// stream, so readers on any thread share no mutable state and need no locks
+// Read-only access to a zip archive: Data.pak, or the read side under
+// ZipFolder. The central directory is parsed once up front; after that every
+// access opens its own stream, so readers on any thread share no mutable
+// state and need no locks
 
 class PakFile final
 {
 public:
+	struct Entry
+	{
+		juce::String	path;
+		int64_t			headerOffset;
+		int64_t			compressedSize;
+		int64_t			uncompressedSize;
+		uint32_t		crc;
+		uint32_t		dosDateTime;	// DOS date in the high word, time in the low
+		bool			deflated;
+	};
+
 	// Parse the central directory. Any error leaves the pak invalid. The zip
 	// may sit appended to a host file (the release exe): all offsets shift by
 	// the host's size, which the end-anchored format lets us recover
@@ -28,7 +41,16 @@ public:
 	[[ nodiscard ]] const juce::File& getFile () const	{	return pakFile;	}
 	[[ nodiscard ]] int getNumEntries () const			{	return int ( entries.size () );	}
 
+	// Entries with unreadable compression (anything but stored/deflate)
+	[[ nodiscard ]] int getNumUnsupported () const		{	return numUnsupported;	}
+
+	[[ nodiscard ]] const std::vector<Entry>& getEntries () const	{	return entries;	}
+	[[ nodiscard ]] const Entry* findEntry ( const juce::String& path ) const	{	return find ( path );	}
+
 	[[ nodiscard ]] bool exists ( const juce::String& path ) const;
+
+	// True when any file lives under the prefix
+	[[ nodiscard ]] bool folderExists ( const juce::String& prefix ) const;
 
 	// nullptr when the entry is missing or the pak is unreadable. A deflated
 	// entry's stream reads front-to-back; rewinding one re-inflates from the
@@ -46,19 +68,11 @@ public:
 	[[ nodiscard ]] juce::StringArray listFolders ( const juce::String& prefix ) const;
 
 private:
-	struct Entry
-	{
-		juce::String	path;
-		juce::int64		headerOffset;
-		juce::int64		compressedSize;
-		juce::int64		uncompressedSize;
-		bool			deflated;
-	};
-
 	[[ nodiscard ]] const Entry* find ( const juce::String& path ) const;
 
 	juce::File			pakFile;
 	std::vector<Entry>	entries;
+	int					numUnsupported = 0;
 
 	// Case-insensitive, like the file systems the naked layout lives on
 	std::unordered_map<std::string, size_t>	lookup;
