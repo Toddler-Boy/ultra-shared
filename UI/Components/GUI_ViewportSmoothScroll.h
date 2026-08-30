@@ -54,7 +54,7 @@ public:
 			if ( ! ( jumped * wheel.deltaY <= 0.0f && std::abs ( jumped ) <= stepLimit ) )
 				position = viewY;
 
-			position = juce::jlimit ( 0.0f, maxY, position );
+			position = std::clamp ( position, 0.0f, maxY );
 			target = position;
 			animating = true;
 		}
@@ -64,7 +64,7 @@ public:
 		if ( ( target - position ) * delta < 0.0f )
 			target = position;
 
-		target = juce::jlimit ( 0.0f, maxY, target + delta );
+		target = std::clamp ( target + delta, 0.0f, maxY );
 
 		writeViewPosition ();
 	}
@@ -82,7 +82,7 @@ private:
 
 	void update ( const double frameSec )
 	{
-		const auto	dt = float ( juce::jlimit ( 0.0, 0.1, frameSec - lastFrameSec ) );
+		const auto	dt = float ( std::clamp ( frameSec - lastFrameSec, 0.0, 0.1 ) );
 		lastFrameSec = frameSec;
 
 		if ( ! animating )
@@ -98,7 +98,7 @@ private:
 			return;
 		}
 
-		target = juce::jlimit ( 0.0f, contentRange (), target );
+		target = std::clamp ( target, 0.0f, contentRange () );
 
 		position += ( target - position ) * ( 1.0f - std::exp ( -easeRate * dt ) );
 

@@ -2,6 +2,8 @@
 
 #include "UI/ui-colors.h"
 
+#include "std_lime/lime_math.h"
+
 #include "ultra-shared/Config/DataSource.h"
 #include "ultra-shared/Resources/Icons.h"
 #include "ultra-shared/UI/Components/GUI_DesktopDropshadow.h"
@@ -505,7 +507,7 @@ void GUI_LookAndFeel::drawLabel ( juce::Graphics& g, juce::Label& l )
 	auto text = l.getText ();
 
 	g.drawFittedText ( text, textArea, l.getJustificationType (),
-					   juce::jmax ( 1, int ( textArea.getHeight () / g.getCurrentFont ().getHeight () ) ),
+					   std::max ( 1, int ( textArea.getHeight () / g.getCurrentFont ().getHeight () ) ),
 					   l.getMinimumHorizontalScale () );
 }
 //-------------------------------------------------------------------------------------------------
@@ -1181,7 +1183,7 @@ void GUI_LookAndFeel::drawRasterBars ( juce::Graphics& g, juce::Rectangle<float>
 	auto	y = b.getY ();
 	do
 	{
-		auto	h = juce::jmap ( rand.nextFloat (), 5.0f, 20.0f );
+		auto	h = lime::remap ( rand.nextFloat (), 0.0f, 1.0f, 5.0f, 20.0f );
 		if ( rand.nextFloat () < 0.05f )
 			h *= 1.5f;
 
