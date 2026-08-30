@@ -1,15 +1,14 @@
 #include "GUI_LookAndFeel.h"
 
-#include "ultra-shared/UI/Components/GUI_DesktopDropshadow.h"
-#include "ultra-shared/UI/Components/GUI_Toggle.h"
-#include "ultra-shared/Video/colodore.h"
-
-#include "ultra-shared/Video/VIC2_Render.h"
+#include "UI/ui-colors.h"
 
 #include "ultra-shared/Config/DataSource.h"
 #include "ultra-shared/Resources/Icons.h"
-#include "UI/ui-colors.h"
+#include "ultra-shared/UI/Components/GUI_DesktopDropshadow.h"
+#include "ultra-shared/UI/Components/GUI_Toggle.h"
 #include "ultra-shared/UI/UI_Helpers.h"
+#include "ultra-shared/Video/colodore.h"
+#include "ultra-shared/Video/VIC2_Render.h"
 
 //-------------------------------------------------------------------------------------------------
 
@@ -750,15 +749,8 @@ void GUI_LookAndFeel::drawTextEditorOutline ( juce::Graphics& g, int width, int 
 }
 //-------------------------------------------------------------------------------------------------
 
-void GUI_LookAndFeel::drawTableHeaderBackground ( juce::Graphics& g, juce::TableHeaderComponent& header )
+void GUI_LookAndFeel::drawTableHeaderBackground ( juce::Graphics& /*g*/, juce::TableHeaderComponent& /*header*/ )
 {
-/*	g.setColour ( findColour ( UI::colors::text ).withMultipliedAlpha ( 0.1f ) );
-
-	auto&	props = header.getProperties ();
-	const float	yOff = props.getWithDefault ( "line", 10.0f );
-
-	auto	area = header.getLocalBounds ().toFloat ();
-	g.fillRect ( area.removeFromBottom ( yOff ).withHeight ( 1.5f ) );*/
 }
 //-------------------------------------------------------------------------------------------------
 
@@ -968,7 +960,7 @@ void GUI_LookAndFeel::drawPopupMenuSectionHeader ( juce::Graphics& g, const juce
 }
 //-------------------------------------------------------------------------------------------------
 
-void GUI_LookAndFeel::drawPopupMenuColumnSeparatorWithOptions ( juce::Graphics& g, const juce::Rectangle<int>& area, const juce::PopupMenu::Options& )
+void GUI_LookAndFeel::drawPopupMenuColumnSeparatorWithOptions ( juce::Graphics& g, const juce::Rectangle<int>& area, const juce::PopupMenu::Options& /*opt*/ )
 {
 	const auto	bckCol = findColour ( juce::PopupMenu::backgroundColourId );
 	const auto	txtCol = findColour ( juce::PopupMenu::textColourId );
@@ -1124,13 +1116,13 @@ void GUI_LookAndFeel::drawLinearSlider ( juce::Graphics& g, int x, int y, int wi
 		{
 			constexpr auto	trackHeight = 4.0f;
 
-			juce::Point<float>	startPoint ( float ( x ), y + height * 0.5f );
+			const juce::Point<float>	startPoint ( float ( x ), y + height * 0.5f );
 
 			const auto	sliderCol = findColour ( UI::colors::text );
 
 			// Background track
 			{
-				juce::Point<float>	endPoint ( float ( width + x ), startPoint.y );
+				const juce::Point<float>	endPoint ( float ( width + x ), startPoint.y );
 
 				juce::Path	backgroundTrack;
 
@@ -1153,7 +1145,7 @@ void GUI_LookAndFeel::drawLinearSlider ( juce::Graphics& g, int x, int y, int wi
 				}
 			}
 
-			juce::Point<float>	maxPoint { sliderPos, ( y + height ) * 0.5f };
+			const juce::Point<float>	maxPoint { sliderPos, ( y + height ) * 0.5f };
 
 			// Value track
 			{
@@ -1182,14 +1174,14 @@ void GUI_LookAndFeel::drawLinearSlider ( juce::Graphics& g, int x, int y, int wi
 void GUI_LookAndFeel::drawRasterBars ( juce::Graphics& g, juce::Rectangle<float> b )
 {
 	static juce::Random	rand;
-	static colodore	colo;
+	static const colodore	colo;
 	static auto	c64Palette = colo.generateRGB ( 0, colo.generateYUV ( VIC2_Render::settings::colorStandard::PAL, 60.0f, 100.0f, 60.0f ) );
 
 	static auto	colIdx = 0;
 	auto	y = b.getY ();
 	do
 	{
-		auto	h = juce::jmap ( rand.nextFloat (), 15.0f, 20.0f );
+		auto	h = juce::jmap ( rand.nextFloat (), 5.0f, 20.0f );
 		if ( rand.nextFloat () < 0.05f )
 			h *= 1.5f;
 
