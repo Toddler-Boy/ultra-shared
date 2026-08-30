@@ -16,8 +16,8 @@
 
 namespace datasource
 {
-	// Release: appended to the exe (bundled on mac), else a sibling Data.pak
-	// for local pak testing. Debug/Development: never a pak
+	// Release: appended to the exe (bundled on mac). Debug/Development:
+	// never a pak
 	[[ nodiscard ]] bool isPak ();
 
 	// The pak file or naked folder in use, for the startup log

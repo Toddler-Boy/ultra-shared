@@ -217,20 +217,10 @@ namespace
 			// all, so there is nothing to probe
 			return fromPak ( juce::File::getSpecialLocation ( juce::File::currentApplicationFile ).getChildFile ( "Contents/Resources/Data.pak" ) );
 		#elif JUCE_WINDOWS
-			// The pak rides appended to the exe and is the primary source: a
-			// tail that doesn't parse fails hard instead of falling back
-			const auto	exe = juce::File::getSpecialLocation ( juce::File::currentExecutableFile );
-			if ( PakFile::hasZipTail ( exe ) )
-				return fromPak ( exe );
-
-			// No tail (a local Release build): a sibling Data.pak serves pak
-			// testing without the CI append step
-			if ( const auto pak = exe.getSiblingFile ( "Data.pak" ); pak.existsAsFile () )
-				return fromPak ( pak );
-
-			// No pak anywhere: keep the exe as the nominal source, a valid
-			// absolute path that fails the content check
-			return fromPak ( exe );
+			// The pak rides appended to the exe and is the only source, never
+			// a fallback: an exe without a parsing tail stays the nominal
+			// source, a valid absolute path that fails the content check
+			return fromPak ( juce::File::getSpecialLocation ( juce::File::currentExecutableFile ) );
 		#elif JUCE_LINUX
 			// Placeholder until a Linux port is real; both apps use the same
 			// scheme, only the app name differs
