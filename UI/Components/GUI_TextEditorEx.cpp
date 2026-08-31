@@ -135,9 +135,8 @@ void GUI_TextEditorEx::enableSingleClick ()
 }
 //-------------------------------------------------------------------------------------------------
 
-// Focus goes to the outermost ancestor that accepts it (the app's main
-// component), keeping key events routed through the UI tree; with no focused
-// component at all they stop at the desktop window and hot-keys go dead
+// Hand the keyboard focus to the outermost ancestor that accepts it; fully
+// unfocused, key events stop at the desktop window and hot-keys go dead
 void GUI_TextEditorEx::handBackFocus ()
 {
 	juce::Component*	target = nullptr;
