@@ -135,11 +135,29 @@ void GUI_TextEditorEx::enableSingleClick ()
 }
 //-------------------------------------------------------------------------------------------------
 
+// Focus goes to the outermost ancestor that accepts it (the app's main
+// component), keeping key events routed through the UI tree; with no focused
+// component at all they stop at the desktop window and hot-keys go dead
+void GUI_TextEditorEx::handBackFocus ()
+{
+	juce::Component*	target = nullptr;
+
+	for ( auto c = getParentComponent (); c != nullptr; c = c->getParentComponent () )
+		if ( c->getWantsKeyboardFocus () )
+			target = c;
+
+	if ( target != nullptr )
+		target->grabKeyboardFocus ();
+	else
+		juce::Component::unfocusAllComponents ();
+}
+//-------------------------------------------------------------------------------------------------
+
 void GUI_TextEditorEx::returnPressed ()
 {
 	TextEditor::returnPressed ();
 
-	juce::Component::unfocusAllComponents ();
+	handBackFocus ();
 
 	if ( onReturnPressed )
 		onReturnPressed ();
@@ -150,7 +168,7 @@ void GUI_TextEditorEx::escapePressed ()
 {
 	TextEditor::escapePressed ();
 
-	juce::Component::unfocusAllComponents ();
+	handBackFocus ();
 
 	if ( onEscapePressed )
 		onEscapePressed ();

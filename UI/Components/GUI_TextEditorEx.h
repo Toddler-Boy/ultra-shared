@@ -34,6 +34,9 @@ public:
 	std::function<void ()>	onEscapePressed;
 
 private:
+	// This
+	void handBackFocus ();
+
 	// Armed only while the editor has focus: its one job is spotting the
 	// outside click that should take focus away
 	class ClickoutSideListener : private juce::MouseListener
