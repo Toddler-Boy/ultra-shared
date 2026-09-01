@@ -16,9 +16,8 @@ GUI_SettingsChoice::GUI_SettingsChoice ( const juce::String& setSection, const j
 {
 	help.setName ( "help" );
 
-	// The options are frozen storage tokens; the combo displays a translated
-	// text where the language file has one ("settings/<section>/<name>-<option>"),
-	// untranslatable tokens (WAV, FLAC) fall back to themselves
+	// The options are frozen storage tokens; the combo shows the optional
+	// "settings/<section>/<name>-<option>" text, falling back to the token
 	for ( auto i = 0; i < options.size (); ++i )
 		choice.addItem ( strings->getOptional ( "settings/" + setSection + "/" + setName + "-" + options[ i ].toLowerCase (), options[ i ] ), i + 1 );
 
