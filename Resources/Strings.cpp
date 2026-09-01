@@ -30,6 +30,14 @@ void Strings::load ()
 }
 //-----------------------------------------------------------------------------
 
+juce::String Strings::getOptional ( const juce::String& name, const juce::String& fallback ) const
+{
+	const auto	it = result.find ( name );
+
+	return it != result.end () ? it->second : fallback;
+}
+//-----------------------------------------------------------------------------
+
 const juce::String& Strings::get ( const juce::String& name )
 {
 	if ( auto it = result.find ( name ); it != result.end () )
