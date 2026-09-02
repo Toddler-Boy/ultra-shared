@@ -24,6 +24,9 @@ GUI_SettingsToggle::GUI_SettingsToggle ( const juce::String& setSection, const j
 		preferences->set ( settingSection + "/" + settingName, toggle.getToggleState () );
 
 		msg::SettingChanged { settingSection, settingName }.send ();
+
+		if ( onChanged )
+			onChanged ();
 	};
 
 	addAndMakeVisible ( toggle );

@@ -21,6 +21,8 @@ public:
 	// this
 	void restorePreference ();
 
+	std::function<void ()>	onChanged;
+
 private:
 	gin::LayoutSupport	layout { *this };
 
