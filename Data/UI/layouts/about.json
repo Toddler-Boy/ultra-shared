@@ -1,7 +1,7 @@
 // Owned by the ultra-shared submodule (Source/ultra-shared/Data); the copy in
 // Data/UI/layouts is configure-synced by CMake, edit it only in the submodule.
-// GUI_About is a full-window overlay; "body" is the visible drop-shadowed
-// panel, all content clips to it.
+// GUI_About is a GUI_ModalPanel: "body" is the visible drop-shadowed panel,
+// all content clips to it, "close" is the panel's own close button.
 {
 	"constants": [
 		{ "panelW": 620 },

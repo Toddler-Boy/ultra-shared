@@ -1,0 +1,23 @@
+// Owned by the ultra-shared submodule (Source/ultra-shared/Data).
+// GUI_Shortcuts is a GUI_ModalPanel: "body" is the visible drop-shadowed panel,
+// all content clips to it, "close" is the panel's own close button. "list" is
+// the viewport over the section headers and rows.
+{
+	"constants": [
+		{ "panelW": 560 },
+		{ "vpad": 48 },
+		{ "pad": 24 }
+	],
+
+	"components": [
+		{ "id": "body", "cx": "parW2", "y": "vpad", "w": "panelW", "b": "parB - vpad",
+			"components": [
+				{ "id": "title", "x": "pad", "y": "pad", "r": "parW - pad - 48", "h": 36 },
+				{ "id": "hint", "x": "pad", "y": "prevB + 6", "r": "prevR", "h": 28 },
+
+				{ "id": "list", "x": "pad", "y": "prevB + 16", "r": "parW - pad / 4", "b": "parB - vpad - pad / 2" },
+				{ "id": "close", "r": "parW - 8", "y": 8 }
+			]
+		}
+	]
+}
