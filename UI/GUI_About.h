@@ -3,6 +3,7 @@
 #include <JuceHeader.h>
 
 #include "ultra-shared/Helpers/MipMap.h"
+
 #include "ultra-shared/UI/Components/GUI_Label.h"
 #include "ultra-shared/UI/Components/GUI_ScrollTextViewer.h"
 #include "ultra-shared/UI/Components/GUI_SVG_Button.h"
@@ -41,6 +42,7 @@ public:
 	bool keyPressed ( const juce::KeyPress& key ) override;
 
 	// this
+	void setBackground ( juce::Component* comp );
 	void updateColors ();
 	void loadContent ();
 
@@ -59,6 +61,10 @@ private:
 	melatonin::DropShadow	shadow { 12.0 };
 
 	gin::LayoutSupport	layout { *this };
+
+	juce::Image				background;
+	juce::Path				shadowPath;
+	juce::Rectangle<int>	bodyBounds;
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR ( GUI_About )
 };

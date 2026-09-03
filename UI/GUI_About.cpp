@@ -18,6 +18,8 @@ static void broadcastClose ()
 GUI_About::GUI_About ()
 	: juce::Component ( "about" )
 {
+	setOpaque ( true );
+
 	icon.setName ( "icon" );
 	title.setName ( "title" );
 	copyright.setName ( "copyright" );
@@ -75,17 +77,39 @@ void GUI_About::resized ()
 
 void GUI_About::paint ( juce::Graphics& g )
 {
-	// Built here, not cached: the layout hot-reload can move the body
-	// without a resized() call
-	const auto	r = body.getBounds ().toFloat ();
+	const auto	corner = UI::corner ( UI::corners::dialog_body );
 
-	juce::Path	p;
-	p.addRoundedRectangle ( r, UI::corner ( UI::corners::dialog_body, r ) );
+	// Built here: the layout hot-reload can move the body without a resized() call
+	if ( bodyBounds != body.getBounds () )
+	{
+		bodyBounds = body.getBounds ();
+		shadowPath.clear ();
 
-	shadow.render ( g, p );
+		const auto	r = bodyBounds.toFloat ();
 
+		shadowPath.addRoundedRectangle ( r, corner );
+	}
+
+	if ( background.isValid () )
+	{
+		g.drawImage ( background, getBounds ().toFloat () );
+	}
+	else
+	{
+		// Draw only the overlay around the body, not the body itself
+		juce::RectangleList<int>	bckRect;
+		bckRect.add ( getLocalBounds () );
+		bckRect.subtract ( bodyBounds.reduced ( std::ceil ( corner ) ) );
+		g.setColour ( UI::getShade ( 0.15f ) );
+		g.fillRectList ( bckRect );
+	}
+
+	// Draw the drop shadow around the body
+	shadow.render ( g, shadowPath );
+
+	// Draw the body
 	g.setColour ( findColour ( juce::TooltipWindow::backgroundColourId ) );
-	g.fillPath ( p );
+	g.fillPath ( shadowPath );
 }
 //-----------------------------------------------------------------------------
 
@@ -98,6 +122,20 @@ bool GUI_About::keyPressed ( const juce::KeyPress& key )
 	}
 
 	return false;
+}
+//-----------------------------------------------------------------------------
+
+void GUI_About::setBackground ( juce::Component* comp )
+{
+	if ( ! comp )
+	{
+		background = {};
+		return;
+	}
+
+	background = comp->createComponentSnapshot ( comp->getLocalBounds () );
+	gin::applyStackBlur ( background, 50 );
+	gin::applyBlend ( background, gin::BlendMode::Normal, UI::getShade ( 0.25f ).withAlpha ( 0.5f ) );
 }
 //-----------------------------------------------------------------------------
 
