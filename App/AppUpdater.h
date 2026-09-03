@@ -61,6 +61,10 @@ public:
 	// The best-known release; only a successful check fills url/sha256/notes
 	[[ nodiscard ]] const Release& latest () const	{	return latestRelease;	}
 
+	// Starts program after this process has exited; the update swap and the
+	// move into the programs folder both end in one
+	static void relaunchAfterExit ( const juce::File& program )	{	relaunchTarget = program;	}
+
 	// For main (), once JUCE has shut down and released the instance lock
 	static void relaunchIfInstalled ();
 
@@ -79,7 +83,7 @@ private:
 	State		currentState = State::unknown;
 	Release		latestRelease;
 
-	static inline bool	installed = false;
+	static inline juce::File	relaunchTarget;
 
 	juce::SharedResourcePointer<Preferences>	preferences;
 	juce::SharedResourcePointer<Settings>		settings;

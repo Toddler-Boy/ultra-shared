@@ -238,7 +238,7 @@ void AppUpdater::install ()
 		}
 
 		Z_INFO ( "App update " << latestRelease.version << " installed, relaunching" );
-		installed = true;
+		relaunchAfterExit ( installedProgram () );
 
 		if ( onInstalled )
 			onInstalled ();
@@ -373,21 +373,21 @@ bool AppUpdater::replaceProgram ( const juce::MemoryBlock& data )
 
 void AppUpdater::relaunchIfInstalled ()
 {
-	if ( ! installed )
+	if ( relaunchTarget == juce::File () )
 		return;
 
 	#if JUCE_MAC
 		// A second instance beside the exiting one gets its own Dock tile, so a
 		// detached shell opens the bundle once this process is gone (30 s cap)
 		const auto	script = "i=0; while kill -0 " + juce::String ( getpid () ) + " 2>/dev/null && [ $i -lt 300 ]; do sleep 0.1; i=$((i+1)); done; open '"
-						  + installedProgram ().getFullPathName () + "'";
+						  + relaunchTarget.getFullPathName () + "'";
 
 		const juce::StringArray	relaunch ( "/bin/sh", "-c", script );
 		juce::ChildProcess		process;
 
 		process.start ( relaunch, 0 );
 	#else
-		installedProgram ().startAsProcess ();
+		relaunchTarget.startAsProcess ();
 	#endif
 }
 //-----------------------------------------------------------------------------

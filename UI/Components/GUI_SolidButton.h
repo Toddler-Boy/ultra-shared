@@ -19,6 +19,7 @@ public:
 
 	// juce::Component
 	juce::MouseCursor getMouseCursor () override	{	return juce::MouseCursor::PointingHandCursor;	}
+	void enablementChanged () override				{	setAlpha ( isEnabled () ? 1.0f : 0.5f );	}
 
 private:
 	juce::String	textKey;
