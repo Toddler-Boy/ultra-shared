@@ -127,13 +127,17 @@ bool GUI_About::keyPressed ( const juce::KeyPress& key )
 
 void GUI_About::setBackground ( juce::Component* comp )
 {
-	if ( ! comp )
-	{
-		background = {};
-		return;
-	}
+	setBackground ( comp ? comp->createComponentSnapshot ( comp->getLocalBounds () ) : juce::Image {} );
+}
+//-----------------------------------------------------------------------------
 
-	background = comp->createComponentSnapshot ( comp->getLocalBounds () );
+void GUI_About::setBackground ( juce::Image snapshot )
+{
+	background = std::move ( snapshot );
+
+	if ( ! background.isValid () )
+		return;
+
 	gin::applyStackBlur ( background, 50 );
 	gin::applyBlend ( background, gin::BlendMode::Normal, UI::getShade ( 0.25f ).withAlpha ( 0.5f ) );
 }

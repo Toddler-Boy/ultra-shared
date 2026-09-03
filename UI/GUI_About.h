@@ -42,7 +42,10 @@ public:
 	bool keyPressed ( const juce::KeyPress& key ) override;
 
 	// this
+	// The component overload snapshots comp; pass a finished image when the
+	// snapshot needs content the software renderer cannot paint
 	void setBackground ( juce::Component* comp );
+	void setBackground ( juce::Image snapshot );
 	void updateColors ();
 	void loadContent ();
 
