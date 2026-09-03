@@ -1,0 +1,11 @@
+version-pill:
+  checking:        checking
+  updating:        Downloading version {}
+  current:         {} is up to date - click to check again
+  outdated:        Version {} is available - click to update
+  outdated-check:  Version {} is available - click to check again
+  download-failed: Could not download the update - click to retry
+  corrupted:       The downloaded update is corrupted - click to retry
+  replace-failed:  Could not replace the program file - click to retry
+  unknown:         Could not check for updates - click to try again
+  disabled:        Update checks are disabled - click to check manually

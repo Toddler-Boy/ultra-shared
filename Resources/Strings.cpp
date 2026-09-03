@@ -23,10 +23,11 @@ void Strings::load ()
 {
 	loadText ( datasource::loadText ( "UI/strings/" + language + ".yml" ) );
 
-	// The CRT-settings strings ship as their own fragment (owned by the
-	// ultra-shared submodule) layered over the language file
-	if ( datasource::exists ( "UI/strings/crt-settings.yml" ) )
-		appendText ( datasource::loadText ( "UI/strings/crt-settings.yml" ) );
+	// The CRT-settings and app-updater strings ship as their own fragments
+	// (owned by the ultra-shared submodule) layered over the language file
+	for ( const auto* fragment : { "UI/strings/crt-settings.yml", "UI/strings/app-updater.yml" } )
+		if ( datasource::exists ( fragment ) )
+			appendText ( datasource::loadText ( fragment ) );
 }
 //-----------------------------------------------------------------------------
 

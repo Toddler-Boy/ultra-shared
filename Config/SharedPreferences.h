@@ -6,15 +6,19 @@
 
 //-----------------------------------------------------------------------------
 
-// The preference defaults both apps share: the whole CRT-emulation block
-// (overlay, tv, crt, webcam). Each app's Preferences appends this to its own
-// list, so the keys and values cannot drift between the apps
+// The preference defaults both apps share: the app update check and the whole
+// CRT-emulation block (overlay, tv, crt, webcam). Each app's Preferences
+// appends this to its own list, so the keys and values cannot drift between
+// the apps
 
 namespace sharedpreferences
 {
 	[[ nodiscard ]] inline std::vector<YamlFile::value> getDefaultValues ()
 	{
 		return {
+			{ "update",		"check",				true },
+			{ "update",		"check-frequency",		"daily" },
+
 			{ "overlay",	"enabled",				true },
 			{ "overlay",	"bitmap",				"C1702 Bedroom" },
 			{ "overlay",	"daytime",				35 },
