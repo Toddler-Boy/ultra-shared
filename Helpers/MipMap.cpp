@@ -42,7 +42,8 @@ static juce::Image reduceImageByHalf ( const juce::Image& src )
 			incColors ( (T*)srcLine2 );	srcLine2 += srcData.pixelStride;
 			incColors ( (T*)srcLine2 );	srcLine2 += srcData.pixelStride;
 
-			((T*)dstLine)->setARGB ( uint8_t ( a >> 2 ), uint8_t ( r >> 2 ), uint8_t ( g >> 2 ), uint8_t ( b >> 2 ) );
+			// Rounded, so the levels do not drift darker step by step
+			((T*)dstLine)->setARGB ( uint8_t ( ( a + 2 ) >> 2 ), uint8_t ( ( r + 2 ) >> 2 ), uint8_t ( ( g + 2 ) >> 2 ), uint8_t ( ( b + 2 ) >> 2 ) );
 
 			dstLine += dstData.pixelStride;
 		}
@@ -65,19 +66,55 @@ static juce::Image reduceImageByHalf ( const juce::Image& src )
 }
 //-------------------------------------------------------------------------------------------------
 
+// Heavy reductions average dithered and clashing colours to a mid-tone mean that reads
+// as grey at thumbnail size, so every level from the second halving on gets a small
+// saturation lift, applied once to the stored copy so it never compounds. gin scales
+// the part above 100 by three, hence the division.
+static constexpr float	saturationPerLevel = 15.0f;	// percent
+static constexpr float	saturationMax = 40.0f;
+
+// The box filter softens a little on every step, and by 128 px and below that reads as
+// blur. gin's sharpen is a fixed kernel, so the strength comes from blending the
+// sharpened copy back over the level.
+static constexpr int	sharpenBelow = 128;
+static constexpr float	sharpenAmount = 0.6f;
+
 void MipMap::setImage ( const juce::Image& src )
 {
 	images.clear ();
 	if ( src.isNull () )
 		return;
 
-	auto	halfImage = juce::NativeImageType ().convert ( src );
-	images.emplace_back ( halfImage );
+	auto	level = juce::NativeImageType ().convert ( src );
+	images.emplace_back ( level );
 
-	while ( halfImage.getWidth () > 16 && halfImage.getHeight () > 16 )
+	while ( level.getWidth () > 16 && level.getHeight () > 16 )
 	{
-		halfImage = reduceImageByHalf ( halfImage );
-		images.emplace_back ( halfImage );
+		level = reduceImageByHalf ( level );
+
+		const auto	lift = std::min ( saturationMax, saturationPerLevel * float ( images.size () - 1 ) );
+		const auto	sharpen = std::max ( level.getWidth (), level.getHeight () ) <= sharpenBelow;
+
+		if ( lift <= 0.0f && ! sharpen )
+		{
+			images.emplace_back ( level );
+			continue;
+		}
+
+		// The untouched chain feeds the next level; only the stored copy gets the mask and the lift
+		auto	stored = level.createCopy ();
+
+		if ( sharpen )
+		{
+			auto	sharp = stored.createCopy ();
+			gin::applySharpen ( sharp );
+			gin::applyBlend ( stored, sharp, gin::BlendMode::Normal, sharpenAmount );
+		}
+
+		if ( lift > 0.0f )
+			gin::applyHueSaturationLightness ( stored, 0.0f, 100.0f + lift / 3.0f, 0.0f );
+
+		images.emplace_back ( stored );
 	}
 }
 //-------------------------------------------------------------------------------------------------
