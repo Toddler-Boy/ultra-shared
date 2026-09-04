@@ -2,15 +2,27 @@
 
 #include <JuceHeader.h>
 
+// Post-processing of the reduced levels, off by default. 1.0 is the strength tuned for
+// the VIC2 thumbnails, higher values are allowed. Lives outside the class so it is
+// complete when the default arguments below need it
+struct MipMapEnhance
+{
+	float	sharpen = 0.0f;
+	float	saturation = 0.0f;
+};
+//-------------------------------------------------------------------------------------------------
+
 class MipMap final
 {
 public:
-	MipMap () = default;
-	MipMap ( const juce::Image& src )	{	setImage ( src );	}
+	using Enhance = MipMapEnhance;
 
-	void setImage ( const juce::Image& src );
-	void setImage ( const juce::File& f );
-	void setImage ( const void* rawData, size_t numBytesOfData );
+	MipMap () = default;
+	MipMap ( const juce::Image& src, const Enhance& enhance = {} )	{	setImage ( src, enhance );	}
+
+	void setImage ( const juce::Image& src, const Enhance& enhance = {} );
+	void setImage ( const juce::File& f, const Enhance& enhance = {} );
+	void setImage ( const void* rawData, size_t numBytesOfData, const Enhance& enhance = {} );
 
 	void draw ( juce::Graphics& g, juce::Rectangle<float> rc, juce::RectanglePlacement placement = 0 );
 
@@ -26,10 +38,12 @@ public:
 	[[ nodiscard ]] int getHeight () const		{	return isValid () ? images[ 0 ].getHeight () : 0; }
 
 	[[ nodiscard ]] int getNumBytesOfData () const;
+	[[ nodiscard ]] const Enhance& getEnhance () const	{	return enhance;	}
 
 private:
 	[[ nodiscard ]] int getIndexFor ( int width, int height ) const;
 
 	std::vector<juce::Image>	images;
+	Enhance						enhance;
 };
 //-------------------------------------------------------------------------------------------------

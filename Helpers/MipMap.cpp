@@ -69,19 +69,21 @@ static juce::Image reduceImageByHalf ( const juce::Image& src )
 // Heavy reductions average dithered and clashing colours to a mid-tone mean that reads
 // as grey at thumbnail size, so every level from the second halving on gets a small
 // saturation lift, applied once to the stored copy so it never compounds. gin scales
-// the part above 100 by three, hence the division.
+// the part above 100 by three, hence the division. Both this and the sharpening below
+// are scaled by the caller's Enhance: 0 leaves the levels alone, 1 gives these values.
 static constexpr float	saturationPerLevel = 15.0f;	// percent
 static constexpr float	saturationMax = 40.0f;
 
 // The box filter softens a little on every step, and by 128 px and below that reads as
 // blur. gin's sharpen is a fixed kernel, so the strength comes from blending the
-// sharpened copy back over the level.
+// sharpened copy back over the level; a strength beyond one full pass sharpens again on top.
 static constexpr int	sharpenBelow = 128;
 static constexpr float	sharpenAmount = 0.6f;
 
-void MipMap::setImage ( const juce::Image& src )
+void MipMap::setImage ( const juce::Image& src, const Enhance& newEnhance )
 {
 	images.clear ();
+	enhance = newEnhance;
 	if ( src.isNull () )
 		return;
 
@@ -92,10 +94,10 @@ void MipMap::setImage ( const juce::Image& src )
 	{
 		level = reduceImageByHalf ( level );
 
-		const auto	lift = std::min ( saturationMax, saturationPerLevel * float ( images.size () - 1 ) );
-		const auto	sharpen = std::max ( level.getWidth (), level.getHeight () ) <= sharpenBelow;
+		const auto	lift = std::min ( saturationMax, saturationPerLevel * float ( images.size () - 1 ) ) * enhance.saturation;
+		auto		sharpen = std::max ( level.getWidth (), level.getHeight () ) <= sharpenBelow ? sharpenAmount * enhance.sharpen : 0.0f;
 
-		if ( lift <= 0.0f && ! sharpen )
+		if ( lift <= 0.0f && sharpen <= 0.0f )
 		{
 			images.emplace_back ( level );
 			continue;
@@ -104,11 +106,11 @@ void MipMap::setImage ( const juce::Image& src )
 		// The untouched chain feeds the next level; only the stored copy gets the mask and the lift
 		auto	stored = level.createCopy ();
 
-		if ( sharpen )
+		for ( ; sharpen > 0.0f; sharpen -= 1.0f )
 		{
 			auto	sharp = stored.createCopy ();
 			gin::applySharpen ( sharp );
-			gin::applyBlend ( stored, sharp, gin::BlendMode::Normal, sharpenAmount );
+			gin::applyBlend ( stored, sharp, gin::BlendMode::Normal, std::min ( sharpen, 1.0f ) );
 		}
 
 		if ( lift > 0.0f )
@@ -119,15 +121,15 @@ void MipMap::setImage ( const juce::Image& src )
 }
 //-------------------------------------------------------------------------------------------------
 
-void MipMap::setImage ( const juce::File& f )
+void MipMap::setImage ( const juce::File& f, const Enhance& newEnhance )
 {
-	setImage ( juce::ImageFileFormat::loadFrom ( f ) );
+	setImage ( juce::ImageFileFormat::loadFrom ( f ), newEnhance );
 }
 //-------------------------------------------------------------------------------------------------
 
-void MipMap::setImage ( const void* rawData, size_t numBytesOfData )
+void MipMap::setImage ( const void* rawData, size_t numBytesOfData, const Enhance& newEnhance )
 {
-	setImage ( juce::ImageFileFormat::loadFrom ( rawData, numBytesOfData ) );
+	setImage ( juce::ImageFileFormat::loadFrom ( rawData, numBytesOfData ), newEnhance );
 }
 //-------------------------------------------------------------------------------------------------
 
