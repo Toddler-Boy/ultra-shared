@@ -22,6 +22,7 @@ GUI_ModalPanel::GUI_ModalPanel ( const juce::String& name, const char* _closeVer
 	close.bckMargin = 6.0f;
 	close.setSize ( 48, 48 );
 	close.setWantsKeyboardFocus ( false );
+	close.setMouseClickGrabsKeyboardFocus ( false );
 	body.addAndMakeVisible ( close );
 
 	close.onClick = [ this ] {	requestClose ();	};

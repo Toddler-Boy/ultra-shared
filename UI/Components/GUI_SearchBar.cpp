@@ -29,6 +29,7 @@ GUI_SearchBar::GUI_SearchBar ()
 	clearSearch.bckAlpha[ 1 ] = 0.6f;
 	clearSearch.useOrgSize = false;
 	clearSearch.setWantsKeyboardFocus ( false );
+	clearSearch.setMouseClickGrabsKeyboardFocus ( false );
 
 	addChildComponent ( clearSearch );
 

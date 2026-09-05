@@ -28,6 +28,7 @@ GUI_PresetSaveDialog::GUI_PresetSaveDialog ()
 	close.bckMargin = 4.0f;
 	close.setSize ( 32, 32 );
 	close.setWantsKeyboardFocus ( false );
+	close.setMouseClickGrabsKeyboardFocus ( false );
 	close.onClick = [ this ] {	dismiss ();	};
 	body.addAndMakeVisible ( close );
 
