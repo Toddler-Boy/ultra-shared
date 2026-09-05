@@ -9,6 +9,12 @@ constexpr auto	ringMargin = 3;
 constexpr auto	ringRadius = 6.0f;
 constexpr auto	ringWidth = 2.0f;
 
+// The area inside a ring that its stroke never touches
+static juce::Rectangle<int> holeOf ( const juce::Rectangle<int>& r )
+{
+	return r.reduced ( int ( std::ceil ( ringRadius ) ) );
+}
+
 GUI_FocusRing::GUI_FocusRing ()
 	: juce::Component ( "focusRing" )
 {
@@ -35,7 +41,7 @@ void GUI_FocusRing::paint ( juce::Graphics& g )
 
 	const auto	clip = g.getClipBounds ();
 
-	if ( ! clip.intersects ( ring.expanded ( ringMargin ) ) || ring.reduced ( int ( std::ceil ( ringRadius ) ) ).contains ( clip ) )
+	if ( ! clip.intersects ( ring.expanded ( ringMargin ) ) || holeOf ( ring ).contains ( clip ) )
 		return;
 
 	g.setColour ( findColour ( UI::colors::accent ) );
@@ -99,10 +105,19 @@ void GUI_FocusRing::update ()
 	if ( ring == old )
 		return;
 
-	if ( ! old.isEmpty () )
-		repaint ( old.expanded ( ringMargin ) );
+	// Only the strokes: the frames around both rings, minus their holes
+	juce::RectangleList<int>	dirty;
 
-	if ( ! ring.isEmpty () )
-		repaint ( ring.expanded ( ringMargin ) );
+	for ( const auto& r : { old, ring } )
+	{
+		if ( r.isEmpty () )
+			continue;
+
+		dirty.add ( r.expanded ( ringMargin ) );
+		dirty.subtract ( holeOf ( r ) );
+	}
+
+	for ( const auto& r : dirty )
+		repaint ( r );
 }
 //-----------------------------------------------------------------------------
