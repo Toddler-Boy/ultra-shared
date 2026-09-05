@@ -11,12 +11,10 @@ app-provided headers at fixed paths. Each app must supply:
 
 | Header | Required interface |
 | --- | --- |
-| `Config/DataSource.h` | `namespace datasource`: `isPak`, `exists`, `loadText`, `loadData`, `loadImage`, `listFiles`, `listFolders`, `getDevFile`, `setActiveUserOverlay`, `setActiveUserCRTMask` |
 | `Config/FilePaths.h` | `namespace filepaths`: `root` enum (`data`/`user`), `markerFor`, `getUserOverlaysPath`, `getUserCRTMasksPath`, `getUserCRTPresetsPath` |
 | `Config/Preferences.h` | `class Preferences : YamlFile` with the app's defaults table (must define every key the shared components read, including `crt/preset`) |
-| `Helpers/Messages.h` | `msg::SettingChanged` broadcast (theme selector) |
-| `Helpers/ImageUtils.h` | `imageutils::hintFromFilename` (VIC2 screenshot hints) |
-| `UI/GUI_LookAndFeel.h` | LookAndFeel class with `fontPoints ( points, weight )` and `monoFontPoints ( points, weight )` |
+| `Config/Settings.h` | `class Settings : YamlFile` with defaults for `install/stale-copy`, `network/password`, `update/last-check`, `update/last-known-version` (AppInstall, AppUpdater, C64u scanner) |
+| `Helpers/Messages.h` | `msg::SettingChanged { section, name }` (settings components, theme selector); developer-mode screenshot messages `ToggleFirstLuma`, `ToggleFirstLumaAll`, `ToggleThumbnail`, `DeleteImage`, `RemoveBorderColor`, `AssignBorderColor { index }` (VIC2 palette) |
 | `UI/ui-colors.h` | `COLOR_ROLES` X-macro + `UI::colors` enum (see Theme.cpp) |
 | `UI/ui-fonts.h`, `UI/ui-corners.h`, `UI/ui-lines.h`, `UI/ui-paddings.h` | The four role registries (X-macros + `Def`/`fromName`) |
 
