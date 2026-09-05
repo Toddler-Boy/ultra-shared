@@ -37,7 +37,7 @@ void GUI_VersionPill::setState ( const AppUpdater::State newState )
 		progress = 0.0f;
 
 		state = newState;
-		repaint ();
+		fitToContent ();
 		return;
 	}
 
@@ -55,14 +55,14 @@ void GUI_VersionPill::setState ( const AppUpdater::State newState )
 	}
 
 	state = newState;
-	repaint ();
+	fitToContent ();
 }
 //-----------------------------------------------------------------------------
 
 void GUI_VersionPill::setProgress ( const float newProgress )
 {
 	progress = newProgress;
-	repaint ();
+	fitToContent ();
 }
 //-----------------------------------------------------------------------------
 
@@ -75,7 +75,7 @@ void GUI_VersionPill::clicked ()
 	pending.reset ();
 	spinStartMS = juce::Time::getMillisecondCounterHiRes ();
 
-	repaint ();
+	fitToContent ();
 }
 //-----------------------------------------------------------------------------
 
@@ -85,7 +85,49 @@ void GUI_VersionPill::showResult ( const AppUpdater::State result )
 	pending.reset ();
 
 	state = result;
-	repaint ();
+	fitToContent ();
+}
+//-----------------------------------------------------------------------------
+
+void GUI_VersionPill::handleAsyncUpdate ()
+{
+	if ( ! checking )
+		return;
+
+	const auto	elapsed = juce::Time::getMillisecondCounterHiRes () - spinStartMS;
+
+	if ( pending && elapsed >= minCheckingMS )
+	{
+		showResult ( *pending );
+	}
+	else if ( ! pending && elapsed >= failsafeMS )
+	{
+		checking = false;
+		fitToContent ();
+	}
+}
+//-----------------------------------------------------------------------------
+
+void GUI_VersionPill::fitToContent ()
+{
+	const auto	w = juce::roundToInt ( std::ceil ( pillWidth () ) );
+
+	if ( w != getWidth () )
+		setSize ( w, getHeight () );
+	else
+		repaint ();
+}
+//-----------------------------------------------------------------------------
+
+void GUI_VersionPill::resized ()
+{
+	fitToContent ();
+}
+//-----------------------------------------------------------------------------
+
+void GUI_VersionPill::lookAndFeelChanged ()
+{
+	fitToContent ();
 }
 //-----------------------------------------------------------------------------
 
@@ -145,29 +187,19 @@ float GUI_VersionPill::pillWidth () const
 }
 //-----------------------------------------------------------------------------
 
-bool GUI_VersionPill::hitTest ( const int x, const int y )
-{
-	return juce::Rectangle<float> ( pillWidth (), float ( getHeight () ) ).contains ( float ( x ), float ( y ) );
-}
-//-----------------------------------------------------------------------------
-
 void GUI_VersionPill::paintButton ( juce::Graphics& g, bool isMouseOver, bool /*isMouseDown*/ )
 {
+	// The spinner's timing is detected here, applied outside the paint
 	if ( checking )
 	{
 		const auto	elapsed = juce::Time::getMillisecondCounterHiRes () - spinStartMS;
 
-		if ( pending && elapsed >= minCheckingMS )
-			showResult ( *pending );
-		else if ( ! pending && elapsed >= failsafeMS )
-		{
-			checking = false;
-			repaint ();
-		}
+		if ( ( pending && elapsed >= minCheckingMS ) || ( ! pending && elapsed >= failsafeMS ) )
+			triggerAsyncUpdate ();
 	}
 
 	const auto	h = float ( getHeight () );
-	const auto	b = juce::Rectangle<float> ( pillWidth (), h );
+	const auto	b = getLocalBounds ().toFloat ();
 
 	const auto	colId =	  spinning () ? UI::colors::statusUnknown
 						: state == AppUpdater::State::current ? UI::colors::statusOk

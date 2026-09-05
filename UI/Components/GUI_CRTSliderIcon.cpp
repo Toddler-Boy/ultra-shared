@@ -9,6 +9,7 @@ GUI_CRTSliderIcon::GUI_CRTSliderIcon ( const juce::String& setSection, const juc
 	, icon ( "icon", "crt/settings/" + setSection + "/" + setName )
 {
 	icon.setInterceptsMouseClicks ( false, false );
+	icon.setWantsKeyboardFocus ( false );
 
 	slider.setName ( "slider" );
 

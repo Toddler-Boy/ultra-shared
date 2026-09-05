@@ -8,6 +8,7 @@
 #include "Theme.h"
 
 #include "ultra-shared/Config/DataSource.h"
+#include "ultra-shared/UI/UI_Helpers.h"
 #include "Config/FilePaths.h"
 #include "UI/ui-colors.h"
 
@@ -161,34 +162,10 @@ void Theme::load ( const juce::String& name )
 			}
 			else if ( const auto paddingRole = UI::paddings::fromName ( path ); paddingRole != UI::paddings::count )
 			{
-				// CSS shorthand: "all", "tb lr", "top lr bottom" or
-				// "top right bottom left"; negatives grow the rect
-				const auto	tokens = juce::StringArray::fromTokens ( value, " ", "" );
-
-				const auto	numeric = [] ( const juce::String& t )
-				{
-					return t.containsOnly ( "+-.0123456789" ) && t.containsAnyOf ( "0123456789" );
-				};
-
-				if ( tokens.size () >= 1 && tokens.size () <= 4
-					 && std::all_of ( tokens.begin (), tokens.end (), numeric ) )
-				{
-					const auto	v = [ &tokens ] ( const int i ) { return tokens[ i ].getFloatValue (); };
-
-					auto&	def = paddingDefs[ size_t ( paddingRole ) ];
-
-					switch ( tokens.size () )
-					{
-						case 1:	def = { v ( 0 ), v ( 0 ), v ( 0 ), v ( 0 ) };	break;
-						case 2:	def = { v ( 0 ), v ( 1 ), v ( 0 ), v ( 1 ) };	break;
-						case 3:	def = { v ( 0 ), v ( 1 ), v ( 2 ), v ( 1 ) };	break;
-						default: def = { v ( 0 ), v ( 1 ), v ( 2 ), v ( 3 ) };	break;
-					}
-				}
+				if ( const auto def = UI::parsePadding ( value ) )
+					paddingDefs[ size_t ( paddingRole ) ] = *def;
 				else
-				{
 					Z_ERR ( "Bad padding (" << path << ": " << rawValue << ") in theme" );
-				}
 			}
 			else if ( colorDefinitions.contains ( path ) )
 			{

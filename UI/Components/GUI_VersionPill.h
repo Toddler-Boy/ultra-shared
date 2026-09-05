@@ -12,9 +12,10 @@
 //-----------------------------------------------------------------------------
 
 // Shows the running version colored by update state. A click starts the
-// spinner, the next setState ends it; updating spins with the download percentage
+// spinner, the next setState ends it; updating spins with the download
+// percentage. Sizes its own width to the content, the layout sets the height
 
-class GUI_VersionPill final : public juce::Button
+class GUI_VersionPill final : public juce::Button, private juce::AsyncUpdater
 {
 public:
 	GUI_VersionPill ();
@@ -26,14 +27,19 @@ public:
 	void paintButton ( juce::Graphics& g, bool isMouseOver, bool isButtonDown ) override;
 	void clicked () override;
 
-	// juce::Component; the drawn pill is narrower than the bounds
-	bool hitTest ( int x, int y ) override;
+	// juce::Component
+	void resized () override;
+	void lookAndFeelChanged () override;
 
 	// juce::SettableTooltipClient (via juce::Button)
 	juce::String getTooltip () override;
 
 private:
+	// juce::AsyncUpdater: paint detects the spinner's timing, this applies it
+	void handleAsyncUpdate () override;
+
 	void showResult ( AppUpdater::State result );
+	void fitToContent ();
 
 	[[ nodiscard ]] bool spinning () const;
 	[[ nodiscard ]] juce::String currentText () const;

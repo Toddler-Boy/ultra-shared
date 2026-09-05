@@ -15,7 +15,7 @@
 				{ "id": "title", "x": "pad", "y": "pad", "r": "parW - pad - 48", "h": 36 },
 				{ "id": "hint", "x": "pad", "y": "prevB + 6", "r": "prevR", "h": 28 },
 
-				{ "id": "list", "x": "pad", "y": "prevB + 16", "r": "parW - pad / 4", "b": "parB - vpad - pad / 2" },
+				{ "id": "list", "x": "pad / 4", "y": "prevB + 16", "r": "parW - pad / 4", "b": "parB - vpad - pad / 2" },
 				{ "id": "close", "r": "parW - 8", "y": 8 }
 			]
 		}

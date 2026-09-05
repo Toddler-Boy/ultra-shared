@@ -139,7 +139,7 @@ void GUI_ShortcutList::paint ( juce::Graphics& g )
 	for ( const auto& item : items )
 	{
 		const auto	h = item.header ? headerH : rowH;
-		const auto	row = juce::Rectangle<float> ( 0.0f, y, width, h );
+		const auto	row = juce::Rectangle<float> ( float ( leftInset ), y, width - float ( leftInset ), h );
 		y += h;
 
 		if ( row.getBottom () < clip.getY () || row.getY () > clip.getBottom () )
@@ -243,6 +243,7 @@ GUI_Shortcuts::GUI_Shortcuts ()
 
 	viewport.setScrollBarsShown ( true, false );
 	viewport.setViewedComponent ( &list, false );
+	viewport.getProperties ().set ( "focusMargin", "2" );
 
 	body.addAndMakeVisible ( title );
 	body.addAndMakeVisible ( hint );
@@ -254,6 +255,9 @@ void GUI_Shortcuts::resized ()
 {
 	GUI_ModalPanel::resized ();
 
+	// The viewport is wider than the text column, the rows align with the title
+	list.leftInset = title.getX () - viewport.getX ();
 	list.setSize ( viewport.getMaximumVisibleWidth (), list.getHeight () );
+	list.repaint ();
 }
 //-----------------------------------------------------------------------------

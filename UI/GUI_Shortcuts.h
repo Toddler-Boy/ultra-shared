@@ -26,6 +26,9 @@ public:
 	void lookAndFeelChanged () override;
 	void paint ( juce::Graphics& g ) override;
 
+	// Rows start this far in from the left edge
+	int	leftInset = 0;
+
 private:
 	struct Item
 	{

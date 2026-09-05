@@ -214,6 +214,30 @@ UI::paddings::Def UI::paddingDef ( const UI::paddings::Role role )
 }
 //-----------------------------------------------------------------------------
 
+std::optional<UI::paddings::Def> UI::parsePadding ( const juce::String& value )
+{
+	const auto	tokens = juce::StringArray::fromTokens ( value, " ", "" );
+
+	const auto	numeric = [] ( const juce::String& t )
+	{
+		return t.containsOnly ( "+-.0123456789" ) && t.containsAnyOf ( "0123456789" );
+	};
+
+	if ( tokens.isEmpty () || tokens.size () > 4 || ! std::all_of ( tokens.begin (), tokens.end (), numeric ) )
+		return std::nullopt;
+
+	const auto	v = [ &tokens ] ( const int i ) { return tokens[ i ].getFloatValue (); };
+
+	switch ( tokens.size () )
+	{
+		case 1:		return UI::paddings::Def { v ( 0 ), v ( 0 ), v ( 0 ), v ( 0 ) };
+		case 2:		return UI::paddings::Def { v ( 0 ), v ( 1 ), v ( 0 ), v ( 1 ) };
+		case 3:		return UI::paddings::Def { v ( 0 ), v ( 1 ), v ( 2 ), v ( 1 ) };
+		default:	return UI::paddings::Def { v ( 0 ), v ( 1 ), v ( 2 ), v ( 3 ) };
+	}
+}
+//-----------------------------------------------------------------------------
+
 void UI::setFontRole ( juce::Label& label, const UI::fonts::Role role )
 {
 	label.getProperties ().set ( "fontRole", int ( role ) );

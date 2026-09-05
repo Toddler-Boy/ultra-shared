@@ -46,11 +46,26 @@ private:
 	std::unique_ptr<Watcher>	watcher;
 	juce::Component::SafePointer<juce::Component>	target;
 
-	juce::Rectangle<int>	ring;
-	bool					keyboardNav = false;
+	// Ring rect = the target's visible area plus its margin. Margin = the
+	// theme's focus-ring padding, scaled per side by the target's
+	// "focusMargin" property (CSS shorthand of factors). Radius from its
+	// "focusRadius" property: a number, or the target's own corner role name
+	// (concentric: that corner plus the margin); the theme's focus-ring
+	// corner otherwise
+	struct Ring
+	{
+		juce::Rectangle<int>	rect;
+		float					radius = 0.0f;
+
+		bool operator== ( const Ring& ) const = default;
+	};
+
+	Ring	ring;
+	bool	keyboardNav = false;
 
 	void update ();
 
+	[[ nodiscard ]] static juce::Rectangle<int> holeOf ( const Ring& r );
 	[[ nodiscard ]] static bool hasOwnFocusVisual ( const juce::Component& c );
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR ( GUI_FocusRing )

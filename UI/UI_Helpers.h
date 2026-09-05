@@ -4,6 +4,7 @@
 
 #include <functional>
 #include <memory>
+#include <optional>
 #include <utility>
 
 #include "UI/ui-corners.h"
@@ -68,6 +69,10 @@ namespace UI
 
 	// The raw themed per-side values, for deriving sizes from a padding
 	[[ nodiscard ]] UI::paddings::Def paddingDef ( UI::paddings::Role role );
+
+	// CSS shorthand: "all", "tb lr", "top lr bottom" or "top right bottom left";
+	// negatives allowed. nullopt for anything else
+	[[ nodiscard ]] std::optional<UI::paddings::Def> parsePadding ( const juce::String& value );
 	[[ nodiscard ]] juce::Font monoFont ( const float points, const int weight );
 
 	[[ nodiscard ]] std::unique_ptr<juce::Drawable> getMenuIcon ( const juce::String& name );

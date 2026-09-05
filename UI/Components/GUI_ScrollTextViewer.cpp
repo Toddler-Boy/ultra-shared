@@ -108,6 +108,7 @@ GUI_ScrollTextViewer::GUI_ScrollTextViewer ()
 {
 	viewport.setScrollBarsShown ( true, false );
 	viewport.setViewedComponent ( &textRenderer, false );
+	viewport.getProperties ().set ( "focusMargin", "2" );
 
 	addAndMakeVisible ( viewport );
 }
