@@ -124,8 +124,8 @@ void GUI_FocusRing::update ()
 			ring.rect = juce::BorderSize<int> ( juce::roundToInt ( margin.top ), juce::roundToInt ( margin.left ),
 												juce::roundToInt ( margin.bottom ), juce::roundToInt ( margin.right ) ).addedTo ( area );
 
-			// Radius: "focusRadius" as a number, or as the component's own corner
-			// role (concentric: that corner plus the margin), else the theme role
+			// Radius: "focusRadius" as a number, or a corner role name (that corner
+			// plus the margin), else the theme role
 			const auto	rectF = ring.rect.toFloat ();
 			const auto	halfSide = std::min ( rectF.getWidth (), rectF.getHeight () ) / 2.0f;
 			const auto&	r = props[ "focusRadius" ];

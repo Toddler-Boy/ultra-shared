@@ -189,7 +189,7 @@ float GUI_VersionPill::pillWidth () const
 
 void GUI_VersionPill::paintButton ( juce::Graphics& g, bool isMouseOver, bool /*isMouseDown*/ )
 {
-	// The spinner's timing is detected here, applied outside the paint
+	// The spinner's timing: detected here, applied in handleAsyncUpdate ()
 	if ( checking )
 	{
 		const auto	elapsed = juce::Time::getMillisecondCounterHiRes () - spinStartMS;

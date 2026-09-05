@@ -46,12 +46,11 @@ private:
 	std::unique_ptr<Watcher>	watcher;
 	juce::Component::SafePointer<juce::Component>	target;
 
-	// Ring rect = the target's visible area plus its margin. Margin = the
-	// theme's focus-ring padding, scaled per side by the target's
-	// "focusMargin" property (CSS shorthand of factors). Radius from its
-	// "focusRadius" property: a number, or the target's own corner role name
-	// (concentric: that corner plus the margin); the theme's focus-ring
-	// corner otherwise
+	// Rect = the target's visible area plus the margin: the focus_ring padding
+	// role, scaled per side by the target's "focusMargin" property (CSS
+	// shorthand of factors). Radius = the target's "focusRadius" property: a
+	// number, or a corner role name (that corner plus the margin); else the
+	// focus_ring corner role
 	struct Ring
 	{
 		juce::Rectangle<int>	rect;

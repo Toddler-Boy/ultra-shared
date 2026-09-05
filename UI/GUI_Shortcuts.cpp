@@ -255,7 +255,7 @@ void GUI_Shortcuts::resized ()
 {
 	GUI_ModalPanel::resized ();
 
-	// The viewport is wider than the text column, the rows align with the title
+	// Rows align with the title
 	list.leftInset = title.getX () - viewport.getX ();
 	list.setSize ( viewport.getMaximumVisibleWidth (), list.getHeight () );
 	list.repaint ();
