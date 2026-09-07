@@ -102,9 +102,10 @@ namespace
 }
 //-----------------------------------------------------------------------------
 
-bool PakFile::open ( const juce::File& _pakFile )
+bool PakFile::open ( const juce::File& _pakFile, const bool memoryMap )
 {
 	pakFile = _pakFile;
+	mapping.reset ();
 	entries.clear ();
 	lookup.clear ();
 	numUnsupported = 0;
@@ -205,6 +206,17 @@ bool PakFile::open ( const juce::File& _pakFile )
 		entries.push_back ( { path, eocd.base + headerOffset, compressedSize, uncompressedSize, crc, dosDateTime, method == 8 } );
 	}
 
+	if ( isValid () && memoryMap )
+	{
+		mapping = std::make_unique<juce::MemoryMappedFile> ( pakFile, juce::MemoryMappedFile::readOnly );
+
+		if ( mapping->getData () == nullptr )
+		{
+			Z_ERR ( "Cannot map " << pakFile.getFullPathName () );
+			mapping.reset ();
+		}
+	}
+
 	return isValid ();
 }
 //-----------------------------------------------------------------------------
@@ -244,11 +256,36 @@ bool PakFile::folderExists ( const juce::String& prefix ) const
 }
 //-----------------------------------------------------------------------------
 
-std::unique_ptr<juce::InputStream> PakFile::createStream ( const juce::String& path ) const
+std::unique_ptr<juce::InputStream> PakFile::rawStream ( const Entry& e ) const
 {
-	const auto	e = find ( path );
-	if ( e == nullptr )
-		return nullptr;
+	// The local header repeats name/extra with its own lengths, so the data
+	// offset comes from it, not from the central directory
+	auto dataOffset = [ &e ] ( const uint8_t* lh )
+	{
+		return e.headerOffset + 30 + juce::int64 ( u16 ( lh + 26 ) ) + juce::int64 ( u16 ( lh + 28 ) );
+	};
+
+	if ( mapping != nullptr )
+	{
+		const auto*	base = static_cast<const uint8_t*> ( mapping->getData () );
+		const auto	size = juce::int64 ( mapping->getSize () );
+
+		if ( e.headerOffset + 30 > size || u32 ( base + e.headerOffset ) != 0x04034b50 )
+		{
+			Z_ERR ( "Bad local header for " << e.path << " in " << pakFile.getFullPathName () );
+			return nullptr;
+		}
+
+		const auto	offset = dataOffset ( base + e.headerOffset );
+
+		if ( offset + e.compressedSize > size )
+		{
+			Z_ERR ( "Truncated entry " << e.path << " in " << pakFile.getFullPathName () );
+			return nullptr;
+		}
+
+		return std::make_unique<juce::MemoryInputStream> ( base + offset, size_t ( e.compressedSize ), false );
+	}
 
 	auto	in = std::make_unique<juce::FileInputStream> ( pakFile );
 	if ( ! in->openedOk () )
@@ -257,24 +294,29 @@ std::unique_ptr<juce::InputStream> PakFile::createStream ( const juce::String& p
 		return nullptr;
 	}
 
-	// The local header repeats name/extra with its own lengths, so the data
-	// offset comes from it, not from the central directory
 	uint8_t	lh[ 30 ];
-	in->setPosition ( e->headerOffset );
+	in->setPosition ( e.headerOffset );
 	if ( in->read ( lh, 30 ) != 30 || u32 ( lh ) != 0x04034b50 )
 	{
-		Z_ERR ( "Bad local header for " << e->path << " in " << pakFile.getFullPathName () );
+		Z_ERR ( "Bad local header for " << e.path << " in " << pakFile.getFullPathName () );
 		return nullptr;
 	}
 
-	const auto	dataOffset = e->headerOffset + 30 + juce::int64 ( u16 ( lh + 26 ) ) + juce::int64 ( u16 ( lh + 28 ) );
+	return std::make_unique<juce::SubregionStream> ( in.release (), dataOffset ( lh ), e.compressedSize, true );
+}
+//-----------------------------------------------------------------------------
 
-	auto	sub = std::make_unique<juce::SubregionStream> ( in.release (), dataOffset, e->compressedSize, true );
+std::unique_ptr<juce::InputStream> PakFile::createStream ( const juce::String& path ) const
+{
+	const auto	e = find ( path );
+	if ( e == nullptr )
+		return nullptr;
 
-	if ( ! e->deflated )
-		return sub;
+	auto	raw = rawStream ( *e );
+	if ( raw == nullptr || ! e->deflated )
+		return raw;
 
-	return std::make_unique<juce::GZIPDecompressorInputStream> ( sub.release (), true, juce::GZIPDecompressorInputStream::deflateFormat, e->uncompressedSize );
+	return std::make_unique<juce::GZIPDecompressorInputStream> ( raw.release (), true, juce::GZIPDecompressorInputStream::deflateFormat, e->uncompressedSize );
 }
 //-----------------------------------------------------------------------------
 

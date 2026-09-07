@@ -10,8 +10,8 @@
 
 // Read-only access to a zip archive: Data.pak, or the read side under
 // ZipFolder. The central directory is parsed once up front; after that every
-// access opens its own stream, so readers on any thread share no mutable
-// state and need no locks
+// access reads through its own stream, so readers on any thread share no
+// mutable state and need no locks
 
 class PakFile final
 {
@@ -29,8 +29,10 @@ public:
 
 	// Parse the central directory. Any error leaves the pak invalid. The zip
 	// may sit appended to a host file (the release exe): all offsets shift by
-	// the host's size, which the end-anchored format lets us recover
-	bool open ( const juce::File& _pakFile );
+	// the host's size, which the end-anchored format lets us recover.
+	// memoryMap pins the file for the object's lifetime, never for an archive
+	// that gets replaced
+	bool open ( const juce::File& _pakFile, const bool memoryMap = false );
 
 	// True when the file ends in a plausible central directory — the appended
 	// pak marker. Parsing can still fail afterwards; that's a hard error, not
@@ -70,9 +72,13 @@ public:
 private:
 	[[ nodiscard ]] const Entry* find ( const juce::String& path ) const;
 
-	juce::File			pakFile;
-	std::vector<Entry>	entries;
-	int					numUnsupported = 0;
+	// The entry's compressed bytes; nullptr on a bad local header
+	[[ nodiscard ]] std::unique_ptr<juce::InputStream> rawStream ( const Entry& e ) const;
+
+	juce::File								pakFile;
+	std::unique_ptr<juce::MemoryMappedFile>	mapping;
+	std::vector<Entry>						entries;
+	int										numUnsupported = 0;
 
 	// Case-insensitive, like the file systems the naked layout lives on
 	std::unordered_map<std::string, size_t>	lookup;

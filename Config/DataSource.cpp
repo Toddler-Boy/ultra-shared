@@ -44,7 +44,7 @@ namespace
 
 		s.pak = true;
 		s.folder = pakFile.getParentDirectory ();
-		s.pakFile.open ( pakFile );
+		s.pakFile.open ( pakFile, true );
 
 		return s;
 	}
