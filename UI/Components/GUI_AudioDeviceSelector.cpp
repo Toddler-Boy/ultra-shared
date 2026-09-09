@@ -62,11 +62,10 @@ juce::StringArray GUI_AudioDeviceSelector::getOutputNames ()
 	auto	devs = type->getDeviceNames ( false );
 
 	#if JUCE_LINUX
-		// ALSA reports every plugin and route as a device. Kept: JACK and each
-		// card's direct outputs. Dropped: the sound server and ALSA's own
-		// default (both are "System default"), conversions, channel splits and
-		// card-less alias duplicates, matched on alsa-lib's fixed description
-		// strings (the part after the card name)
+		// ALSA lists every plugin and route. Kept: JACK and each card's direct
+		// outputs. Dropped: sound server and ALSA default (= "System default"),
+		// conversions, channel splits, card-less aliases. Matched on alsa-lib's
+		// fixed descriptions (the part after the card name)
 		static const std::array<const char*, 7>	hidden
 		{
 			"Default Audio Device",
