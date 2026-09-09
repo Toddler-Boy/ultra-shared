@@ -216,15 +216,13 @@ namespace
 			// breaking the code signature, which stops the app from launching at
 			// all, so there is nothing to probe
 			return fromPak ( juce::File::getSpecialLocation ( juce::File::currentApplicationFile ).getChildFile ( "Contents/Resources/Data.pak" ) );
-		#elif JUCE_WINDOWS
-			// The pak rides appended to the exe and is the only source, never
-			// a fallback: an exe without a parsing tail stays the nominal
-			// source, a valid absolute path that fails the content check
+		#elif JUCE_WINDOWS || JUCE_LINUX
+			// The pak rides appended to the executable and is the only source,
+			// never a fallback: an executable without a parsing tail stays the
+			// nominal source, a valid absolute path that fails the content
+			// check. Linux: inside an AppImage this is the inner binary, which
+			// is where the pak sits
 			return fromPak ( juce::File::getSpecialLocation ( juce::File::currentExecutableFile ) );
-		#elif JUCE_LINUX
-			// Placeholder until a Linux port is real; both apps use the same
-			// scheme, only the app name differs
-			return fromFolder ( juce::File ( "/usr/share" ).getChildFile ( ProjectInfo::projectName ) );
 		#else
 			jassertfalse;	// Unsupported platform
 			return {};
