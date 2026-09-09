@@ -4,6 +4,8 @@
 
 #if JUCE_MAC
 	#include <unistd.h>
+#elif JUCE_LINUX
+	#include <cstdlib>
 #endif
 
 //-----------------------------------------------------------------------------
@@ -31,14 +33,26 @@ static std::array<int, 3> parseVersion ( const juce::String& text )
 }
 //-----------------------------------------------------------------------------
 
-// What an update replaces: the exe on Windows, the whole bundle on macOS
+// What an update replaces: the exe on Windows, the whole bundle on macOS, the
+// AppImage on Linux (invalid for a bare binary)
 static juce::File installedProgram ()
 {
 	#if JUCE_MAC
 		return juce::File::getSpecialLocation ( juce::File::currentApplicationFile );
+	#elif JUCE_LINUX
+		if ( const auto appImage = std::getenv ( "APPIMAGE" ) )
+			return juce::File ( juce::String ( juce::CharPointer_UTF8 ( appImage ) ) );
+
+		return {};
 	#else
 		return juce::File::getSpecialLocation ( juce::File::currentExecutableFile );
 	#endif
+}
+//-----------------------------------------------------------------------------
+
+bool AppUpdater::canInstall ()
+{
+	return installedProgram () != juce::File ();
 }
 //-----------------------------------------------------------------------------
 
@@ -62,7 +76,7 @@ AppUpdater::AppUpdater ( const juce::String& manifestBaseURL )
 {
 	// The program a swap renamed away can only go once that process has
 	// exited; a failed delete simply waits for the next start
-	if constexpr ( canInstall )
+	if ( canInstall () )
 		programSibling ( ".old" ).deleteRecursively ();
 
 	// The stored result of the last successful check bridges throttle-skipped
@@ -251,15 +265,16 @@ void AppUpdater::install ()
 }
 //-----------------------------------------------------------------------------
 
-// Puts the downloaded program at fresh, beside the running one. Windows: the
-// bare exe. macOS: mount the dmg, ditto keeps the bundle's signature intact
+// Puts the downloaded program at fresh, beside the running one. Windows and
+// Linux: the bare file (the AppImage needs its execute bit). macOS: mount the
+// dmg, ditto keeps the bundle's signature intact
 bool AppUpdater::stageProgram ( const juce::MemoryBlock& data, const juce::File& fresh )
 {
-	#if JUCE_WINDOWS
-		if ( fresh.replaceWithData ( data.getData (), data.getSize () ) )
+	#if JUCE_WINDOWS || JUCE_LINUX
+		if ( fresh.replaceWithData ( data.getData (), data.getSize () ) && fresh.setExecutePermission ( true ) )
 			return true;
 
-		Z_ERR ( "Couldn't write the app update next to the exe: " << fresh.getFullPathName () );
+		Z_ERR ( "Couldn't write the app update next to the program: " << fresh.getFullPathName () );
 		return false;
 	#elif JUCE_MAC
 		// Gatekeeper runs a quarantined bundle from a throwaway copy
@@ -326,9 +341,10 @@ bool AppUpdater::stageProgram ( const juce::MemoryBlock& data, const juce::File&
 //-----------------------------------------------------------------------------
 
 // The new program lands beside the running one and the two swap by rename.
-// Windows swaps the exe itself (a running exe can be renamed, not
-// overwritten); macOS swaps the Contents folder, so the bundle folder keeps
-// its inode and the Dock and Finder aliases still point at the same app
+// Windows and Linux swap the file itself (a running exe can be renamed, not
+// overwritten; the AppImage runtime holds the old inode); macOS swaps the
+// Contents folder, so the bundle folder keeps its inode and the Dock and
+// Finder aliases still point at the same app
 bool AppUpdater::replaceProgram ( const juce::MemoryBlock& data )
 {
 	const auto	program = installedProgram ();
@@ -386,6 +402,11 @@ void AppUpdater::relaunchIfInstalled ()
 		juce::ChildProcess		process;
 
 		process.start ( relaunch, 0 );
+	#elif JUCE_LINUX
+		// Direct exec: startAsProcess goes through a shell and escapes only spaces
+		juce::ChildProcess	process;
+
+		process.start ( juce::StringArray ( relaunchTarget.getFullPathName () ), 0 );
 	#else
 		relaunchTarget.startAsProcess ();
 	#endif

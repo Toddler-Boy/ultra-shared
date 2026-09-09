@@ -35,12 +35,9 @@ public:
 	void check ();
 	void checkNow ();
 
-	// The swap-in-place exists for Windows and macOS
-	#if JUCE_WINDOWS || JUCE_MAC
-		static constexpr bool	canInstall = true;
-	#else
-		static constexpr bool	canInstall = false;
-	#endif
+	// Windows, macOS and AppImage runs (APPIMAGE set by the runtime); a bare
+	// Linux binary only checks
+	[[ nodiscard ]] static bool canInstall ();
 
 	// Downloads latest (), verifies its sha256, swaps it in beside the running
 	// program and asks for the quit via onInstalled; the relaunch follows the exit

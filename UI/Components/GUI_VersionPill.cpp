@@ -254,7 +254,7 @@ juce::String GUI_VersionPill::getTooltip ()
 			return strings->get ( "version-pill/current" ).replace ( "{}", ProjectInfo::projectName );
 
 		case AppUpdater::State::outdated:
-			return strings->get ( AppUpdater::canInstall ? "version-pill/outdated" : "version-pill/outdated-check" ).replace ( "{}", available );
+			return strings->get ( AppUpdater::canInstall () ? "version-pill/outdated" : "version-pill/outdated-check" ).replace ( "{}", available );
 
 		case AppUpdater::State::updating:
 			return strings->get ( "version-pill/updating" ).replace ( "{}", available );
