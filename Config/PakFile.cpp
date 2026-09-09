@@ -46,7 +46,7 @@ namespace
 
 		// Worst case: zip64 record + locator (76 bytes) in front of an EOCD
 		// carrying a maximum-length comment
-		const auto	tailSize = std::min ( fileSize, int64_t ( 65633 ) );
+		const auto	tailSize = std::min ( fileSize, juce::int64 ( 65633 ) );
 		if ( tailSize < 22 )
 			return false;
 
