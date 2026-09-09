@@ -1,3 +1,6 @@
+#include <algorithm>
+#include <array>
+
 #include "ultra-shared/UI/Components/GUI_AudioDeviceSelector.h"
 
 //-----------------------------------------------------------------------------
@@ -35,7 +38,8 @@ void GUI_AudioDeviceSelector::setAudioDeviceManager ( juce::AudioDeviceManager& 
 
 	type->scanForDevices ();
 
-	defaultOutputDevice = manager->getAudioDeviceSetup ().outputDeviceName;
+	// "System default" is the OS default output, not whatever happens to be open
+	defaultOutputDevice = type->getDeviceNames ( false )[ type->getDefaultDeviceIndex ( false ) ];
 
 	manager->addChangeListener ( this );
 
@@ -56,6 +60,43 @@ void GUI_AudioDeviceSelector::setCurrentOutputDevice ( const juce::String& devic
 juce::StringArray GUI_AudioDeviceSelector::getOutputNames ()
 {
 	auto	devs = type->getDeviceNames ( false );
+
+	#if JUCE_LINUX
+		// ALSA reports every plugin and route as a device. Kept: JACK and each
+		// card's direct outputs. Dropped: the sound server and ALSA's own
+		// default (both are "System default"), conversions, channel splits and
+		// card-less alias duplicates, matched on alsa-lib's fixed description
+		// strings (the part after the card name)
+		static const std::array<const char*, 7>	hidden
+		{
+			"Default Audio Device",
+			"Direct hardware device without any conversions",
+			"Hardware device with all software conversions",
+			"Direct sample mixing device",
+			"Direct sample snooping device",
+			"USB Stream Output",
+			"Open Sound System",
+		};
+		static const std::array<const char*, 2>	cardAliases { "IEC958 (S/PDIF) Digital Audio Output", "HDMI Audio Output" };
+
+		for ( auto i = devs.size (); --i >= 0; )
+		{
+			const auto&	name = devs[ i ];
+			const auto	semicolon = name.indexOf ( "; " );
+			const auto	description = semicolon < 0 ? name : name.substring ( semicolon + 2 );
+			const auto	is = [ & ] ( const char* s ) { return description == s; };
+
+			if ( std::ranges::any_of ( hidden, is )
+				|| description.startsWith ( "Default ALSA Output" )
+				|| description.contains ( "PulseAudio" )
+				|| description.contains ( "PipeWire" )
+				|| description.startsWith ( "Plugin for channel" )
+				|| description.startsWith ( "Rate Converter Plugin" )
+				|| description.endsWith ( " speakers" )
+				|| ( semicolon < 0 && std::ranges::any_of ( cardAliases, is ) ) )
+				devs.remove ( i );
+		}
+	#endif
 
 	devs.sortNatural ();
 	devs.insert ( 0, "System default" );
