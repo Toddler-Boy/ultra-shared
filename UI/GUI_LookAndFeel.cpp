@@ -809,8 +809,10 @@ void GUI_LookAndFeel::drawTableHeaderColumn ( juce::Graphics& g, juce::TableHead
 
 void GUI_LookAndFeel::preparePopupMenuWindow ( juce::Component& newWindow )
 {
-	newWindow.setOpaque ( false );
+	// Shadow first: setOpaque recreates the menu's native window, and a new
+	// window lands above the shadow (JUCE's X11 peer won't restack behind a temporary window)
 	new GUI_DesktopDropshadow ( newWindow );
+	newWindow.setOpaque ( false );
 }
 //-------------------------------------------------------------------------------------------------
 
