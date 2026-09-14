@@ -58,6 +58,12 @@ void setWindowProperties ( void* windowHandle, unsigned int titleColor )
 }
 //-----------------------------------------------------------------------------
 
+void setWindowOwner ( void* windowHandle, void* ownerHandle )
+{
+	SetWindowLongPtr ( static_cast<HWND> ( windowHandle ), GWLP_HWNDPARENT, reinterpret_cast<LONG_PTR> ( ownerHandle ) );
+}
+//-----------------------------------------------------------------------------
+
 int64_t availableMemoryBytes ()
 {
 	MEMORYSTATUSEX	status = {};

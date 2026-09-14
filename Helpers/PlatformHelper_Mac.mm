@@ -75,6 +75,21 @@ void setWindowProperties ( void* windowHandle, unsigned int titleColor )
 	}
 }
 
+// The peer handles are NSViews, the owner relation lives on their windows
+void setWindowOwner ( void* windowHandle, void* ownerHandle )
+{
+	NSWindow* window = [(NSView*) windowHandle window];
+	if ( ! window )
+		return;
+
+	if ( auto parent = [window parentWindow] )
+		[parent removeChildWindow:window];
+
+	if ( ownerHandle )
+		if ( NSWindow* owner = [(NSView*) ownerHandle window] )
+			[owner addChildWindow:window ordered:NSWindowAbove];
+}
+
 #include <mach/mach.h>
 
 int64_t availableMemoryBytes ()

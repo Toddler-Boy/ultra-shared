@@ -11,6 +11,11 @@
 
 void setWindowProperties ( void* windowHandle, unsigned int titleColor );
 
+// Makes a top-level window an owned window of another (native peer handles):
+// always above its owner, never above other apps, minimized with it. nullptr
+// detaches. No-op on Linux, temporary windows float there anyway
+void setWindowOwner ( void* windowHandle, void* ownerHandle );
+
 // Free physical RAM right now; 0 if the query failed
 [[ nodiscard ]] int64_t availableMemoryBytes ();
 

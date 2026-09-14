@@ -343,15 +343,17 @@ std::pair<std::unique_ptr<juce::Drawable>, int> UI::getSVG ( const juce::String&
 	if ( ! svg )
 		return { std::make_unique<juce::DrawableComposite> (), 1 };
 
+	// The drawable's units: width/height when given (the viewBox maps onto
+	// them), else the viewBox
 	auto	viewBoxSize = 0;
-	if ( auto vbStr = svg->getStringAttribute ( "viewBox" ); vbStr.isNotEmpty () )
+	if ( auto w = svg->getIntAttribute ( "width" ), h = svg->getIntAttribute ( "height" ); w > 0 && h > 0 )
+	{
+		viewBoxSize = std::max ( w, h );
+	}
+	else if ( auto vbStr = svg->getStringAttribute ( "viewBox" ); vbStr.isNotEmpty () )
 	{
 		auto	vb = juce::Rectangle<int>::fromString ( vbStr );
 		viewBoxSize = std::max ( vb.getWidth (), vb.getHeight () );
-	}
-	else if ( auto w = svg->getIntAttribute ( "width" ), h = svg->getIntAttribute ( "height" ); w > 0 && h > 0 )
-	{
-		viewBoxSize = std::max ( w, h );
 	}
 
 	jassert ( viewBoxSize > 0 );
