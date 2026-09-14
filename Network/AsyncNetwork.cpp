@@ -68,7 +68,11 @@ void AsyncNetwork::put ( const juce::String& endpoint, const juce::StringArray& 
 
 void AsyncNetwork::enqueue ( const juce::String& endpoint, const juce::String& method, const juce::MemoryBlock& data, NetworkCallback cb, const juce::StringArray& params )
 {
-	auto	requestUrl = baseAddress.getChildURL ( endpoint );
+	// Config paths carry spaces ("Data Streams"). WinINet and NSURL encode
+	// them on their own, libcurl rejects the URL outright. Spaces only, no
+	// URL::addEscapeChars: the C64u decodes %20 but not %3A, an escaped
+	// "video:start" is a 404
+	auto	requestUrl = baseAddress.getChildURL ( endpoint.replace ( " ", "%20" ) );
 
 	if ( ! data.isEmpty () )
 		requestUrl = requestUrl.withPOSTData ( data );
