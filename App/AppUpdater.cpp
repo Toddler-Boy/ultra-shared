@@ -129,9 +129,9 @@ void AppUpdater::check ()
 		return;
 	}
 
-	// An unknown check-frequency value reads as the daily default
+	// Unknown values read as daily, "startup" never skips
 	const auto	frequency = preferences->get<juce::String> ( "update/check-frequency" );
-	const auto	intervalMin = ( frequency == "weekly" ? 7 : frequency == "monthly" ? 30 : 1 ) * 24 * 60;
+	const auto	intervalMin = ( frequency == "startup" ? 0 : frequency == "weekly" ? 7 : frequency == "monthly" ? 30 : 1 ) * 24 * 60;
 
 	// Any successful check stamps the clock, failures retry on the next
 	// start; the skip also needs a stored result to bridge with

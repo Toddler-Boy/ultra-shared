@@ -23,6 +23,9 @@ public:
 	void setState ( AppUpdater::State newState );
 	void setProgress ( float newProgress );
 
+	// Spinner on, setState () ends it
+	void startChecking ();
+
 	// juce::Button
 	void paintButton ( juce::Graphics& g, bool isMouseOver, bool isButtonDown ) override;
 	void clicked () override;

@@ -66,7 +66,7 @@ void GUI_VersionPill::setProgress ( const float newProgress )
 }
 //-----------------------------------------------------------------------------
 
-void GUI_VersionPill::clicked ()
+void GUI_VersionPill::startChecking ()
 {
 	if ( spinning () )
 		return;
@@ -76,6 +76,12 @@ void GUI_VersionPill::clicked ()
 	spinStartMS = juce::Time::getMillisecondCounterHiRes ();
 
 	fitToContent ();
+}
+//-----------------------------------------------------------------------------
+
+void GUI_VersionPill::clicked ()
+{
+	startChecking ();
 }
 //-----------------------------------------------------------------------------
 
