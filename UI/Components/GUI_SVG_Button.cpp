@@ -97,3 +97,25 @@ void GUI_SVG_Button::setStage ( int newStage )
 	repaint ();
 }
 //-----------------------------------------------------------------------------
+
+// The tooltip is the button's only text, so it names the button
+std::unique_ptr<juce::AccessibilityHandler> GUI_SVG_Button::createAccessibilityHandler ()
+{
+	struct Handler final : juce::AccessibilityHandler
+	{
+		Handler ( GUI_SVG_Button& _button )
+			: juce::AccessibilityHandler ( _button, juce::AccessibilityRole::button,
+										   juce::AccessibilityActions ().addAction ( juce::AccessibilityActionType::press, [ &_button ] { _button.triggerClick (); } ) )
+			, button ( _button )
+		{
+		}
+
+		juce::String getTitle () const override	{	return button.getTooltip ();	}
+		juce::String getHelp () const override	{	return button.getTooltip ();	}
+
+		GUI_SVG_Button&	button;
+	};
+
+	return std::make_unique<Handler> ( *this );
+}
+//-----------------------------------------------------------------------------

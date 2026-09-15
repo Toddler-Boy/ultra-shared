@@ -3,12 +3,15 @@
 
 #include "ultra-shared/UI/Components/GUI_AudioDeviceSelector.h"
 
+#include "ultra-shared/Resources/Strings.h"
+
 //-----------------------------------------------------------------------------
 
 GUI_AudioDeviceSelector::GUI_AudioDeviceSelector ()
 	: juce::Component ( "output" )
 {
 	// Output device drop-down
+	outputDeviceDropDown.setTitle ( juce::SharedResourcePointer<Strings> ()->get ( "settings/sound_output" ) );
 	outputDeviceDropDown.onChange = [ this ] { updateConfig ( true, false, false ); };
 
 	addAndMakeVisible ( outputDeviceDropDown );

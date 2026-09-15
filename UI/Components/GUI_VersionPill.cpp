@@ -22,6 +22,33 @@ constexpr auto	pulseMS = pulsePeriodMS * pulseCycles;
 
 //-----------------------------------------------------------------------------
 
+// "85.1.2" reads as a date, "85 point 1 point 2" as a version
+[[ nodiscard ]] static juce::String spokenVersion ( const juce::String& version )
+{
+	return version.replace ( ".", " point " );
+}
+//-----------------------------------------------------------------------------
+
+// "ultraSID" gets spelled out, "ultra sid" reads as words
+[[ nodiscard ]] static juce::String spokenName ( const juce::String& name )
+{
+	juce::String	spoken;
+	auto			prevLower = false;
+
+	for ( const auto c : name )
+	{
+		if ( prevLower && juce::CharacterFunctions::isUpperCase ( c ) )
+			spoken += ' ';
+
+		spoken += c;
+		prevLower = juce::CharacterFunctions::isLowerCase ( c );
+	}
+
+	return spoken.toLowerCase ();
+}
+
+//-----------------------------------------------------------------------------
+
 GUI_VersionPill::GUI_VersionPill ()
 	: juce::Button ( "version" )
 {
@@ -155,7 +182,7 @@ bool GUI_VersionPill::spinning () const
 }
 //-----------------------------------------------------------------------------
 
-juce::String GUI_VersionPill::currentText () const
+juce::String GUI_VersionPill::currentText ( const bool spoken ) const
 {
 	if ( checking )
 		return strings->get ( "version-pill/checking" );
@@ -166,7 +193,31 @@ juce::String GUI_VersionPill::currentText () const
 	if ( state == AppUpdater::State::outdated )
 		return strings->get ( "version-pill/update" );
 
+	if ( spoken )
+		return strings->get ( "version-pill/spoken-version" ).replace ( "{}", spokenVersion ( ProjectInfo::versionString ) );
+
 	return ProjectInfo::versionString;
+}
+//-----------------------------------------------------------------------------
+
+std::unique_ptr<juce::AccessibilityHandler> GUI_VersionPill::createAccessibilityHandler ()
+{
+	struct Handler final : juce::AccessibilityHandler
+	{
+		Handler ( GUI_VersionPill& _pill )
+			: juce::AccessibilityHandler ( _pill, juce::AccessibilityRole::button,
+										   juce::AccessibilityActions ().addAction ( juce::AccessibilityActionType::press, [ &_pill ] { _pill.triggerClick (); } ) )
+			, pill ( _pill )
+		{
+		}
+
+		juce::String getTitle () const override	{	return pill.currentText ( true );	}
+		juce::String getHelp () const override	{	return pill.tooltipText ( true );	}
+
+		GUI_VersionPill&	pill;
+	};
+
+	return std::make_unique<Handler> ( *this );
 }
 //-----------------------------------------------------------------------------
 
@@ -282,12 +333,19 @@ void GUI_VersionPill::paintButton ( juce::Graphics& g, bool isMouseOver, bool /*
 
 juce::String GUI_VersionPill::getTooltip ()
 {
-	const auto	available = settings->get<juce::String> ( "update/last-known-version" );
+	return tooltipText ( false );
+}
+//-----------------------------------------------------------------------------
+
+juce::String GUI_VersionPill::tooltipText ( const bool spoken ) const
+{
+	const auto	stored = settings->get<juce::String> ( "update/last-known-version" );
+	const auto	available = spoken ? spokenVersion ( stored ) : stored;
 
 	switch ( state )
 	{
 		case AppUpdater::State::current:
-			return strings->get ( "version-pill/current" ).replace ( "{}", ProjectInfo::projectName );
+			return strings->get ( "version-pill/current" ).replace ( "{}", spoken ? spokenName ( ProjectInfo::projectName ) : ProjectInfo::projectName );
 
 		case AppUpdater::State::outdated:
 			return strings->get ( AppUpdater::canInstall () ? "version-pill/outdated" : "version-pill/outdated-check" ).replace ( "{}", available );

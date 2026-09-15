@@ -19,6 +19,7 @@ public:
 
 	// juce::Component
 	void enablementChanged () override;
+	std::unique_ptr<juce::AccessibilityHandler> createAccessibilityHandler () override;
 
 	// juce::TooltipClient
 	juce::String getTooltip () override;

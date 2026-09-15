@@ -1,6 +1,7 @@
 version-pill:
   checking:        checking
   update:          Update
+  spoken-version:  Version {}
   updating:        Downloading version {}
   current:         {} is up to date - click to check again
   outdated:        Version {} is available - click to update

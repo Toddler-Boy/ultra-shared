@@ -8,6 +8,7 @@ GUI_CRTSliderLabel::GUI_CRTSliderLabel ( const juce::String& labelKey, const boo
 {
 	label.setName ( "label" );
 	slider.setName ( "slider" );
+	slider.setTitle ( label.displayText () );
 
 	slider.setScrollWheelEnabled ( false );
 	slider.setRange ( bidirectional ? -maxValue : 0.0, maxValue, step );

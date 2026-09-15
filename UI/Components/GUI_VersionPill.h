@@ -33,6 +33,7 @@ public:
 	// juce::Component
 	void resized () override;
 	void lookAndFeelChanged () override;
+	std::unique_ptr<juce::AccessibilityHandler> createAccessibilityHandler () override;
 
 	// juce::SettableTooltipClient (via juce::Button)
 	juce::String getTooltip () override;
@@ -46,7 +47,10 @@ private:
 	void fitToContent ();
 
 	[[ nodiscard ]] bool spinning () const;
-	[[ nodiscard ]] juce::String currentText () const;
+
+	// spoken = for screen readers: versions read digit groups, the product name reads as words
+	[[ nodiscard ]] juce::String currentText ( bool spoken = false ) const;
+	[[ nodiscard ]] juce::String tooltipText ( bool spoken ) const;
 	[[ nodiscard ]] juce::String iconName () const;
 	[[ nodiscard ]] float pillWidth () const;
 

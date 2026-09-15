@@ -2,6 +2,7 @@
 
 #include "Config/FilePaths.h"
 #include "Helpers/Messages.h"
+#include "ultra-shared/Resources/Strings.h"
 #include "ultra-shared/UI/UI_Helpers.h"
 
 //-----------------------------------------------------------------------------
@@ -10,6 +11,7 @@ GUI_ThemeSelector::GUI_ThemeSelector ()
 	: juce::ComboBox ( "theme" )
 {
 	setScrollWheelEnabled ( false );
+	setTitle ( juce::SharedResourcePointer<Strings> ()->get ( "settings/theme" ) );
 
 	restorePreference ();
 

@@ -36,6 +36,8 @@ GUI_SettingsNumberEdit::GUI_SettingsNumberEdit ( const juce::String& setSection,
 	number.setJustification ( juce::Justification::centred );
 	number.setIndents ( 4, 0 );
 	number.setBorder ( {} );
+	number.setTitle ( label.displayText () );
+	number.setHelpText ( help.displayText () );
 
 	addAndMakeVisible ( label );
 	addAndMakeVisible ( help );

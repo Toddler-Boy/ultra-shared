@@ -22,6 +22,8 @@ GUI_SettingsChoice::GUI_SettingsChoice ( const juce::String& setSection, const j
 		choice.addItem ( strings->getOptional ( "settings/" + setSection + "/" + setName + "-" + options[ i ].toLowerCase (), options[ i ] ), i + 1 );
 
 	choice.setScrollWheelEnabled ( false );
+	choice.setTitle ( label.displayText () );
+	choice.setHelpText ( help.displayText () );
 
 	choice.onChange = [ this ]
 	{

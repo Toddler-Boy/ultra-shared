@@ -46,7 +46,28 @@ public:
 		g.drawText ( text, getLocalBounds ().toFloat (), justification, false );
 	}
 
+	// Screen readers get the shown text
+	std::unique_ptr<juce::AccessibilityHandler> createAccessibilityHandler () override
+	{
+		struct Handler final : juce::AccessibilityHandler
+		{
+			Handler ( GUI_Label& _label )
+				: juce::AccessibilityHandler ( _label, juce::AccessibilityRole::staticText )
+				, label ( _label )
+			{
+			}
+
+			juce::String getTitle () const override	{	return label.displayText ();	}
+
+			GUI_Label&	label;
+		};
+
+		return std::make_unique<Handler> ( *this );
+	}
+
 	// this
+	[[ nodiscard ]] virtual juce::String displayText () const	{	return text;	}
+
 	void setText ( const juce::String& _text )
 	{
 		if ( text == _text )
@@ -116,8 +137,10 @@ public:
 	{
 		g.setFont ( font );
 		g.setColour ( findColour ( colorId ) );
-		g.drawText ( strings->get ( text ), getLocalBounds ().toFloat (), justification, false );
+		g.drawText ( displayText (), getLocalBounds ().toFloat (), justification, false );
 	}
+
+	[[ nodiscard ]] juce::String displayText () const override	{	return strings->get ( text );	}
 
 private:
 	juce::SharedResourcePointer<Strings>    strings;

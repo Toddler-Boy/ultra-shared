@@ -19,6 +19,9 @@ GUI_SettingsToggle::GUI_SettingsToggle ( const juce::String& setSection, const j
 	addAndMakeVisible ( label );
 	addAndMakeVisible ( help );
 
+	toggle.setTitle ( label.displayText () );
+	toggle.setHelpText ( help.displayText () );
+
 	toggle.onClick = [ this ]
 	{
 		preferences->set ( settingSection + "/" + settingName, toggle.getToggleState () );
