@@ -774,14 +774,28 @@ void GUI_LookAndFeel::drawTableHeaderColumn ( juce::Graphics& g, juce::TableHead
 
 	const auto	colName = columnName.toUpperCase ();
 
+	const int	just = props.getWithDefault ( "colJust" + juce::String ( columnId ), int ( juce::Justification::Flags::centredLeft ) );
+	const bool	rightAligned = juce::Justification ( just ).testFlags ( juce::Justification::right );
+
 	if ( ( columnFlags & ( juce::TableHeaderComponent::sortedForwards | juce::TableHeaderComponent::sortedBackwards ) ) != 0 )
 	{
-		tw = width - th;
+		// The arrow follows the text: after left-aligned text, at the far
+		// right for right-aligned text, which only moves by the arrow's width
+		auto	area = juce::Rectangle<float> { float ( width ) - th / 2.0f, 0.0f, th / 2.0f, th };
 
-		if ( icon.isEmpty () )
-			tw = std::min ( juce::GlyphArrangement::getStringWidth ( fnt, colName ), tw );
+		if ( rightAligned )
+		{
+			tw -= th / 2.0f;
+		}
+		else
+		{
+			tw = width - th;
 
-		auto	area = juce::Rectangle<float> { tw, 0.0f, th, th };
+			if ( icon.isEmpty () )
+				tw = std::min ( juce::GlyphArrangement::getStringWidth ( fnt, colName ), tw );
+
+			area = { tw, 0.0f, th, th };
+		}
 
 		juce::Path sortArrow;
 
@@ -794,7 +808,6 @@ void GUI_LookAndFeel::drawTableHeaderColumn ( juce::Graphics& g, juce::TableHead
 
 	if ( icon.isEmpty () )
 	{
-		const int	just = props.getWithDefault ( "colJust" + juce::String ( columnId ), int ( juce::Justification::Flags::centredLeft ) );
 		g.setFont ( fnt );
 		g.drawText ( colName, juce::Rectangle<float> { xOff, 0.0f, tw, th }, just, true);
 	}
