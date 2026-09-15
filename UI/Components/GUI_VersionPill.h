@@ -42,6 +42,7 @@ private:
 	void handleAsyncUpdate () override;
 
 	void showResult ( AppUpdater::State result );
+	void applyState ( AppUpdater::State newState );
 	void fitToContent ();
 
 	[[ nodiscard ]] bool spinning () const;
@@ -55,6 +56,7 @@ private:
 	bool								checking = false;
 	std::optional<AppUpdater::State>	pending;
 	double								spinStartMS = 0.0;
+	double								pulseStartMS = 0.0;
 
 	juce::SharedResourcePointer<Icons>			icons;
 	juce::SharedResourcePointer<Preferences>	preferences;

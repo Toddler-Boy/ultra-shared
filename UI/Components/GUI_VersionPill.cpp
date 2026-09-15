@@ -15,6 +15,11 @@ constexpr auto	failsafeMS = 15000.0;
 
 constexpr auto	elementGap = 4.0f;
 
+// Whole cycles end on the resting alpha
+constexpr auto	pulsePeriodMS = 1500.0;
+constexpr auto	pulseCycles = 7;
+constexpr auto	pulseMS = pulsePeriodMS * pulseCycles;
+
 //-----------------------------------------------------------------------------
 
 GUI_VersionPill::GUI_VersionPill ()
@@ -36,8 +41,7 @@ void GUI_VersionPill::setState ( const AppUpdater::State newState )
 		pending.reset ();
 		progress = 0.0f;
 
-		state = newState;
-		fitToContent ();
+		applyState ( newState );
 		return;
 	}
 
@@ -53,6 +57,15 @@ void GUI_VersionPill::setState ( const AppUpdater::State newState )
 		showResult ( newState );
 		return;
 	}
+
+	applyState ( newState );
+}
+//-----------------------------------------------------------------------------
+
+void GUI_VersionPill::applyState ( const AppUpdater::State newState )
+{
+	if ( newState == AppUpdater::State::outdated && state != newState )
+		pulseStartMS = juce::Time::getMillisecondCounterHiRes ();
 
 	state = newState;
 	fitToContent ();
@@ -90,8 +103,7 @@ void GUI_VersionPill::showResult ( const AppUpdater::State result )
 	checking = false;
 	pending.reset ();
 
-	state = result;
-	fitToContent ();
+	applyState ( result );
 }
 //-----------------------------------------------------------------------------
 
@@ -150,6 +162,9 @@ juce::String GUI_VersionPill::currentText () const
 
 	if ( state == AppUpdater::State::updating )
 		return juce::String ( int ( progress * 100.0f ) ) + "%";
+
+	if ( state == AppUpdater::State::outdated )
+		return strings->get ( "version-pill/update" );
 
 	return ProjectInfo::versionString;
 }
@@ -215,7 +230,22 @@ void GUI_VersionPill::paintButton ( juce::Graphics& g, bool isMouseOver, bool /*
 
 	const auto	col = findColour ( colId );
 
-	g.setColour ( col.withMultipliedAlpha ( isMouseOver ? 0.25f : 0.15f ) );
+	auto	fillAlpha = isMouseOver ? 0.25f : 0.15f;
+
+	if ( state == AppUpdater::State::outdated && ! spinning () )
+	{
+		const auto	elapsed = juce::Time::getMillisecondCounterHiRes () - pulseStartMS;
+
+		if ( elapsed < pulseMS )
+		{
+			const auto	phase = float ( std::fmod ( elapsed, pulsePeriodMS ) / pulsePeriodMS ) * juce::MathConstants<float>::twoPi;
+			fillAlpha = 0.15f + 0.35f * ( 0.5f - 0.5f * std::cos ( phase ) );
+
+			repaint ();
+		}
+	}
+
+	g.setColour ( col.withMultipliedAlpha ( fillAlpha ) );
 	g.fillRoundedRectangle ( b, UI::corner ( UI::corners::badge, b ) );
 
 	g.setColour ( col );
