@@ -55,7 +55,8 @@ private:
 	bool		hasTimedOut = true;
 
 	// Timing
-	std::chrono::milliseconds				timeoutThresholdMs { std::chrono::milliseconds ( 1000 ) };
+	// Packets arrive every 4 ms or faster; this rides out a Wi-Fi hiccup
+	std::chrono::milliseconds				timeoutThresholdMs { std::chrono::milliseconds ( 250 ) };
 	std::chrono::steady_clock::time_point	lastReadTime;
 
 	// Networking
