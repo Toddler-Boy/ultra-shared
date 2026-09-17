@@ -17,7 +17,7 @@ namespace sharedpreferences
 	{
 		return {
 			{ "update",		"check",				true },
-			{ "update",		"check-frequency",		"daily" },
+			{ "update",		"check-frequency",		"startup" },
 
 			{ "overlay",	"enabled",				true },
 			{ "overlay",	"bitmap",				"C1702 Bedroom" },
