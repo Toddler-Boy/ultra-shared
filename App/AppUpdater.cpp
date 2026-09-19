@@ -270,7 +270,13 @@ void AppUpdater::install ()
 // dmg, ditto keeps the bundle's signature intact
 bool AppUpdater::stageProgram ( const juce::MemoryBlock& data, const juce::File& fresh )
 {
-	#if JUCE_WINDOWS || JUCE_LINUX
+	#if JUCE_WINDOWS
+		if ( fresh.replaceWithData ( data.getData (), data.getSize () ) )
+			return true;
+
+		Z_ERR ( "Couldn't write the app update next to the program: " << fresh.getFullPathName () );
+		return false;
+	#elif JUCE_LINUX
 		if ( fresh.replaceWithData ( data.getData (), data.getSize () ) && fresh.setExecutePermission ( true ) )
 			return true;
 
