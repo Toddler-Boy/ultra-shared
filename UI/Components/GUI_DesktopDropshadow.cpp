@@ -18,7 +18,10 @@ GUI_DesktopDropshadow::GUI_DesktopDropshadow ( juce::Component& o )
 		addToDesktop ( juce::ComponentPeer::windowIsTemporary |
 					  juce::ComponentPeer::windowIgnoresKeyPresses |
 					  juce::ComponentPeer::windowIgnoresMouseClicks );
-		setAlwaysOnTop (true);
+	#if ! JUCE_MAC
+		// macOS parks a modal menu window at the modal panel level, an always-on-top shadow would cover it
+		setAlwaysOnTop ( true );
+	#endif
 		setTransform ( juce::AffineTransform ().scaled ( owner.getDesktopScaleFactor () ) );
 	}
 
