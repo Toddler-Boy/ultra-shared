@@ -23,8 +23,9 @@ cd "$(dirname "${BASH_SOURCE[0]}")/../../.."
 
 # The mac and the Linux box build the shared Windows tree, their build trees stay on the local disk
 if [ "$TOOLCHAIN" = "vs" ]; then
-    BUILD_DIR="$PWD/Builds/vs"
-    LOG_DIR="$PWD/Builds/logs"
+    # Mixed-style C:/... path: bash and the Windows-native tools both read it
+    BUILD_DIR="$(cygpath -m "$PWD")/Builds/vs"
+    LOG_DIR="$(cygpath -m "$PWD")/Builds/logs"
 else
     BUILD_DIR="$HOME/builds/$(basename "$PWD")"
     LOG_DIR="$BUILD_DIR/logs"
