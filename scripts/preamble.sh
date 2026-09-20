@@ -21,12 +21,12 @@ esac
 # This file lives at Source/ultra-shared/scripts inside the app repos
 cd "$(dirname "${BASH_SOURCE[0]}")/../../.."
 
-# The mac builds the shared Windows tree, its build tree stays on the local disk
-if [ "$TOOLCHAIN" = "xcode" ]; then
+# The mac and the Linux box build the shared Windows tree, their build trees stay on the local disk
+if [ "$TOOLCHAIN" = "vs" ]; then
+    BUILD_DIR="Builds/vs"
+    LOG_DIR="Builds/logs"
+else
     BUILD_DIR="$HOME/builds/$(basename "$PWD")"
     LOG_DIR="$BUILD_DIR/logs"
-else
-    BUILD_DIR="Builds/$TOOLCHAIN"
-    LOG_DIR="Builds/logs"
 fi
 mkdir -p "$LOG_DIR"
