@@ -23,8 +23,8 @@ cd "$(dirname "${BASH_SOURCE[0]}")/../../.."
 
 # The mac and the Linux box build the shared Windows tree, their build trees stay on the local disk
 if [ "$TOOLCHAIN" = "vs" ]; then
-    BUILD_DIR="Builds/vs"
-    LOG_DIR="Builds/logs"
+    BUILD_DIR="$PWD/Builds/vs"
+    LOG_DIR="$PWD/Builds/logs"
 else
     BUILD_DIR="$HOME/builds/$(basename "$PWD")"
     LOG_DIR="$BUILD_DIR/logs"
