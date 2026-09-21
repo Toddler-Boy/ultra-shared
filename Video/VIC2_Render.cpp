@@ -20,8 +20,7 @@ VIC2_Render::VIC2_Render ( const bool withBackup )
 
 	indexPixels = (uint8_t*)juce::Image::BitmapData ( indexBuffer, juce::Image::BitmapData::ReadWriteMode::writeOnly ).data;
 
-	if ( withBackup )
-		indexBufferBackup.resize ( outerUnscaledLength );
+	keepBackup = withBackup;
 }
 //-----------------------------------------------------------------------------
 
@@ -40,6 +39,8 @@ bool VIC2_Render::loadImage ( const char* filename )
 bool VIC2_Render::loadImage ( const char* filename, const void* data, const size_t size )
 {
 	indexBufferWidth = 0;
+	numFields = 1;
+	curField = 0;
 
 	if ( ! juce::String ( filename ).endsWithIgnoreCase ( ".png" ) )
 		return false;
@@ -170,12 +171,60 @@ static std::vector<uint8_t> matchToVIC2 ( const std::vector<uint32_t>& imgPalett
 }
 //-----------------------------------------------------------------------------
 
+// How many C64 pictures a PNG of this size stacks: one at 320x200 or
+// 384x272, two interlace fields at doubled height, 0 for anything else
+static int fieldsForSize ( const int width, const int height )
+{
+	const auto	frameHeight =	width == VIC2_Render::innerUnscaledWidth ? VIC2_Render::innerUnscaledHeight
+							:	width == VIC2_Render::outerUnscaledWidth ? VIC2_Render::outerUnscaledHeight : 0;
+
+	if ( frameHeight == 0 || height % frameHeight != 0 || height > frameHeight * 2 )
+		return 0;
+
+	return height / frameHeight;
+}
+//-----------------------------------------------------------------------------
+
+template <typename T, typename F>
+void VIC2_Render::storeFields ( const char* filename, const T* src, const int width, const int fields, F convert )
+{
+	const auto	inner = width == innerUnscaledWidth;
+	const auto	height = inner ? innerUnscaledHeight : outerUnscaledHeight;
+	const auto	rowByteSkip = inner ? unscaledBorderSizeX * 2 : 0;
+
+	numFields = fields;
+
+	for ( auto field = fields - 1; field >= 0; --field )
+	{
+		auto	dst = indexPixels + ( inner ? unscaledBorderSizeY * outerUnscaledWidth + unscaledBorderSizeX : 0 );
+		auto	s = src + size_t ( field ) * size_t ( width ) * size_t ( height );
+
+		for ( auto y = 0; y < height; ++y )
+		{
+			for ( auto x = 0; x < width; ++x )
+				*dst++ = convert ( *s++ );
+
+			dst += rowByteSkip;
+		}
+
+		// The picture replaced whatever renderScreen drew
+		invalidate ();
+		indexBufferWidth = width;
+
+		findBorderColor ( filename );
+
+		curField = field;
+		backupIndexBuffer ();
+	}
+}
+//-----------------------------------------------------------------------------
+
 bool VIC2_Render::convertTrueColor ( const char* filename, const uint32_t* rawData, const int width, const int height )
 {
 	indexBufferWidth = 0;
 
-	// Images has to either 320x200 or 384x272
-	if ( ! ( ( width == innerUnscaledWidth && height == innerUnscaledHeight ) || ( width == outerUnscaledWidth && height == outerUnscaledHeight ) ) )
+	const auto	fields = fieldsForSize ( width, height );
+	if ( fields == 0 )
 		return false;
 
 	// Convert true color image (32-bit, alpha gets ignored) to vic2-palette indices (0-15)
@@ -215,29 +264,7 @@ bool VIC2_Render::convertTrueColor ( const char* filename, const uint32_t* rawDa
 	//
 	// Third pass: create index buffer
 	//
-	{
-		auto	dst = (uint8_t*)juce::Image::BitmapData ( indexBuffer, juce::Image::BitmapData::ReadWriteMode::writeOnly ).data;
-
-		const auto	rowByteSkip = ( width == innerUnscaledWidth ) ? unscaledBorderSizeX * 2 : 0;
-		if ( rowByteSkip )
-			dst += unscaledBorderSizeY * outerUnscaledWidth + unscaledBorderSizeX;
-
-		for ( auto y = 0; y < height; ++y )
-		{
-			for ( auto x = 0; x < width; ++x )
-				*dst++ = mapped[ *rawData++ ];
-
-			dst += rowByteSkip;
-		}
-	}
-
-	// End of conversion; the image replaced whatever renderScreen drew
-	invalidate ();
-	indexBufferWidth = width;
-
-	findBorderColor ( filename );
-
-	backupIndexBuffer ();
+	storeFields ( filename, rawData, width, fields, [ &mapped ] ( const uint32_t col ) { return mapped[ col ]; } );
 
 	return true;
 }
@@ -247,8 +274,8 @@ bool VIC2_Render::convertPaletted ( const char* filename, const pngloader::image
 {
 	indexBufferWidth = 0;
 
-	// Images has to either 320x200 or 384x272
-	if ( ! ( ( img.width == innerUnscaledWidth && img.height == innerUnscaledHeight ) || ( img.width == outerUnscaledWidth && img.height == outerUnscaledHeight ) ) )
+	const auto	fields = fieldsForSize ( img.width, img.height );
+	if ( fields == 0 )
 		return false;
 
 	// Collect the palette entries the image actually uses; files routinely
@@ -299,31 +326,7 @@ bool VIC2_Render::convertPaletted ( const char* filename, const pngloader::image
 		if ( used[ i ] )
 			lut[ i ] = vic2Indices[ colorPos[ i ] ];
 
-	// Create index buffer
-	{
-		auto	dst = (uint8_t*)juce::Image::BitmapData ( indexBuffer, juce::Image::BitmapData::ReadWriteMode::writeOnly ).data;
-		auto	src = img.indices.data ();
-
-		const auto	rowByteSkip = ( img.width == innerUnscaledWidth ) ? unscaledBorderSizeX * 2 : 0;
-		if ( rowByteSkip )
-			dst += unscaledBorderSizeY * outerUnscaledWidth + unscaledBorderSizeX;
-
-		for ( auto y = 0; y < img.height; ++y )
-		{
-			for ( auto x = 0; x < img.width; ++x )
-				*dst++ = lut[ *src++ ];
-
-			dst += rowByteSkip;
-		}
-	}
-
-	// End of conversion; the image replaced whatever renderScreen drew
-	invalidate ();
-	indexBufferWidth = img.width;
-
-	findBorderColor ( filename );
-
-	backupIndexBuffer ();
+	storeFields ( filename, img.indices.data (), img.width, fields, [ &lut ] ( const uint8_t index ) { return lut[ index ]; } );
 
 	return true;
 }
@@ -332,6 +335,8 @@ bool VIC2_Render::convertPaletted ( const char* filename, const pngloader::image
 bool VIC2_Render::loadPETSCII ( const char* filename )
 {
 	indexBufferWidth = 0;
+	numFields = 1;
+	curField = 0;
 
 	auto	name = juce::String ( filename );
 	auto	file = juce::File ( filename );
@@ -735,10 +740,16 @@ void VIC2_Render::convertToRGB ()
 
 void VIC2_Render::backupIndexBuffer ()
 {
-	if ( indexBufferBackup.empty () )
+	// Interlace fields are kept even without a backup, the thumbnail
+	// needs both
+	if ( ! keepBackup && numFields == 1 )
 		return;
 
-	std::copy_n ( indexPixels, outerUnscaledLength, indexBufferBackup.data () );
+	const auto	needed = size_t ( numFields ) * outerUnscaledLength;
+	if ( indexBufferBackup.size () < needed )
+		indexBufferBackup.resize ( needed );
+
+	std::copy_n ( indexPixels, outerUnscaledLength, indexBufferBackup.data () + size_t ( curField ) * outerUnscaledLength );
 }
 //-----------------------------------------------------------------------------
 
@@ -747,7 +758,7 @@ void VIC2_Render::restoreIndexBuffer ()
 	if ( indexBufferBackup.empty () )
 		return;
 
-	std::copy_n ( indexBufferBackup.data (), outerUnscaledLength, indexPixels );
+	std::copy_n ( indexBufferBackup.data () + size_t ( curField ) * outerUnscaledLength, outerUnscaledLength, indexPixels );
 }
 //-----------------------------------------------------------------------------
 
@@ -755,6 +766,30 @@ juce::Image VIC2_Render::getThumbnail ()
 {
 	// Render as CRT image
 	renderCRT ();
+
+	if ( numFields == 1 )
+		return rgbBuffer;
+
+	// An interlaced picture is seen as the mix of its two fields
+	const auto	firstField = rgbBuffer.createCopy ();
+
+	nextField ();
+	restoreIndexBuffer ();
+	renderCRT ();
+
+	nextField ();
+	restoreIndexBuffer ();
+
+	const auto	src = (const uint32_t*)juce::Image::BitmapData ( firstField, juce::Image::BitmapData::ReadWriteMode::readOnly ).data;
+	const auto	dst = (uint32_t*)juce::Image::BitmapData ( rgbBuffer, juce::Image::BitmapData::ReadWriteMode::readWrite ).data;
+
+	for ( auto i = 0; i < outerUnscaledLength; ++i )
+	{
+		const auto	a = src[ i ];
+		const auto	b = dst[ i ];
+
+		dst[ i ] = ( ( ( a ^ b ) & 0xFEFEFEFEu ) >> 1 ) + ( a & b );
+	}
 
 	return rgbBuffer;
 }

@@ -35,6 +35,9 @@ namespace VIC2
 	// PAL pixel-aspect-ratio correction: VIC-II pixels are not square, so a
 	// 320-wide bitmap displays as 320 * 0.937 = ~300 "square" pixels wide
 	constexpr auto	truePalX = 0.937f;
+
+	constexpr auto	palRefreshHz = 50.125f;
+	constexpr auto	ntscRefreshHz = 59.826f;
 }
 //-----------------------------------------------------------------------------
 
@@ -54,7 +57,8 @@ class VIC2_Render final
 public:
 	VIC2_Render ( const bool withBackup );
 
-	// Load image from file (*.png)
+	// Load image from file (*.png). A picture of doubled height (320x400,
+	// 384x544) is two interlace fields stacked top to bottom
 	bool loadImage ( const char* filename );
 
 	// Same, with the bytes supplied by the caller (factory data from the pak);
@@ -124,6 +128,11 @@ public:
 
 	void restoreIndexBuffer ();
 
+	// An interlaced picture keeps both fields; restoreIndexBuffer brings
+	// back the current one
+	[[ nodiscard ]] int getNumFields () const	{	return numFields;	}
+	void nextField ()	{	curField = ( curField + 1 ) % numFields;	}
+
 	// C64 image size (without borders)
 	static constexpr auto	innerUnscaledWidth = 320;
 	static constexpr auto	innerUnscaledHeight = 200;
@@ -153,6 +162,11 @@ private:
 	// Paletted image straight from the decoder, pixels stay palette indices
 	// and only the palette entries get matched
 	[[ nodiscard ]] bool convertPaletted ( const char* filename, const pngloader::image& img );
+
+	// Blit the stacked fields into the index buffer, last field first so
+	// field 0 stays live; convert maps one source pixel to a palette index
+	template <typename T, typename F>
+	void storeFields ( const char* filename, const T* src, const int width, const int fields, F convert );
 
 	juce::SharedResourcePointer<VIC2_Render_Data>	characterData;
 
@@ -188,7 +202,11 @@ private:
 	juce::Image				rgbBuffer;
 
 	void backupIndexBuffer ();
-	std::vector<uint8_t>	indexBufferBackup;
+	std::vector<uint8_t>	indexBufferBackup;		// one picture per field
+	bool	keepBackup = false;
+
+	int		numFields = 1;
+	int		curField = 0;
 
 	bool		borderInFilename = false;
 };
