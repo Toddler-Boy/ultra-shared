@@ -6,7 +6,6 @@
 
 #include "ultra-shared/Config/DataSource.h"
 #include "ultra-shared/Resources/Icons.h"
-#include "ultra-shared/UI/Components/GUI_DesktopDropshadow.h"
 #include "ultra-shared/UI/Components/GUI_Toggle.h"
 #include "ultra-shared/UI/UI_Helpers.h"
 #include "ultra-shared/Video/colodore.h"
@@ -822,32 +821,40 @@ void GUI_LookAndFeel::drawTableHeaderColumn ( juce::Graphics& g, juce::TableHead
 
 void GUI_LookAndFeel::preparePopupMenuWindow ( juce::Component& newWindow )
 {
-#if JUCE_LINUX
-	// Shadow first: setOpaque recreates the menu's native window, and a new
-	// window lands above the shadow (JUCE's X11 peer won't restack behind a temporary window)
-	new GUI_DesktopDropshadow ( newWindow );
 	newWindow.setOpaque ( false );
-#else
-	// Menu first: on macOS a shadow created before the recreation ends up above the menu
-	newWindow.setOpaque ( false );
-	new GUI_DesktopDropshadow ( newWindow );
-#endif
 }
 //-------------------------------------------------------------------------------------------------
 
 void GUI_LookAndFeel::drawPopupMenuBackground ( juce::Graphics& g, int width, int height )
 {
-	const auto	rc = juce::Rectangle<float> { float ( width ), float ( height ) };
+	const auto	rc = juce::Rectangle<float> { float ( width ), float ( height ) }.reduced ( float ( menuShadowMargin ) );
 	const auto	radius = UI::corner ( UI::corners::menu_body, rc );
 	const auto	colour = findColour ( juce::PopupMenu::backgroundColourId );
+
+	juce::Path	body;
+	body.addRoundedRectangle ( rc, radius );
+	menuShadow.render ( g, body );
 
 	g.setColour ( colour );
 	drawOutlinedRect ( g, rc, radius, UI::lineWidth ( UI::lines::menu_body ), colour.darker () );
 }
 //-------------------------------------------------------------------------------------------------
 
-void GUI_LookAndFeel::drawPopupMenuItem ( juce::Graphics& g, const juce::Rectangle<int>& area, bool isSeparator, bool isActive, bool isHighlighted, bool isTicked, bool hasSubMenu, const juce::String& text, const juce::String& shortcutKeyText, const juce::Drawable* icon, const juce::Colour* obs_textColour )
+void GUI_LookAndFeel::drawPopupMenuUpDownArrow ( juce::Graphics& g, int width, int height, bool isScrollUpArrow )
 {
+	// JUCE hands over the window's top or bottom strip, keep the arrow inside the body
+	const juce::Graphics::ScopedSaveState	state ( g );
+
+	g.setOrigin ( menuShadowMargin, isScrollUpArrow ? menuShadowMargin : 0 );
+	juce::LookAndFeel_V4::drawPopupMenuUpDownArrow ( g, width - menuShadowMargin * 2, height - menuShadowMargin, isScrollUpArrow );
+}
+//-------------------------------------------------------------------------------------------------
+
+void GUI_LookAndFeel::drawPopupMenuItem ( juce::Graphics& g, const juce::Rectangle<int>& itemArea, bool isSeparator, bool isActive, bool isHighlighted, bool isTicked, bool hasSubMenu, const juce::String& text, const juce::String& shortcutKeyText, const juce::Drawable* icon, const juce::Colour* obs_textColour )
+{
+	// The item spans the column including the shadow margin on both sides
+	const auto	area = itemArea.reduced ( menuShadowMargin, 0 );
+
 	const auto	destructive = obs_textColour;
 
 	const auto	bckCol = findColour ( juce::PopupMenu::backgroundColourId );
@@ -947,7 +954,7 @@ void GUI_LookAndFeel::drawPopupMenuItem ( juce::Graphics& g, const juce::Rectang
 
 int GUI_LookAndFeel::getPopupMenuBorderSizeWithOptions ( const juce::PopupMenu::Options& )
 {
-	return 7;
+	return 7 + menuShadowMargin;
 }
 //-------------------------------------------------------------------------------------------------
 
@@ -972,7 +979,7 @@ void GUI_LookAndFeel::drawPopupMenuSectionHeader ( juce::Graphics& g, const juce
 	const auto	txtCol = findColour ( juce::PopupMenu::backgroundColourId );
 	const auto	bckCol = findColour ( juce::PopupMenu::textColourId ).interpolatedWith ( txtCol, 0.5f );
 
-	const auto	r = area.toFloat ().reduced ( 10.0f, 6.0f );
+	const auto	r = area.toFloat ().reduced ( 10.0f + float ( menuShadowMargin ), 6.0f );
 
 	g.setColour ( bckCol );
 	g.fillRoundedRectangle ( r, 1.5f );

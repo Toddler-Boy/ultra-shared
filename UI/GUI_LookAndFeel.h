@@ -110,6 +110,7 @@ public:
 	int getMenuWindowFlags () override { return 0; }	// This disable the default shadow (completely square and ugly)
 	void preparePopupMenuWindow ( juce::Component& newWindow ) override;
 	void drawPopupMenuBackground ( juce::Graphics& g, int width, int height ) override;
+	void drawPopupMenuUpDownArrow ( juce::Graphics& g, int width, int height, bool isScrollUpArrow ) override;
 	void drawPopupMenuItem ( juce::Graphics& g, const juce::Rectangle<int>& area, bool isSeparator, bool isActive, bool isHighlighted, bool isTicked, bool hasSubMenu, const juce::String& text, const juce::String& shortcutKeyText, const juce::Drawable* icon, const juce::Colour* textColour ) override;
 	void drawPopupMenuSectionHeader ( juce::Graphics& g, const juce::Rectangle<int>& area, const juce::String& sectionName ) override;
 	void drawPopupMenuColumnSeparatorWithOptions ( juce::Graphics& g, const juce::Rectangle<int>& area, const juce::PopupMenu::Options& ) override;
@@ -166,6 +167,10 @@ private:
 	juce::FontOptions	defaultFont;
 
 	juce::Typeface::Ptr	monoBase;
+
+	// Rendered into the transparent margin around the menu body (part of the JUCE border)
+	static constexpr int	menuShadowMargin = 11;
+	melatonin::DropShadow	menuShadow { double ( menuShadowMargin ) };
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR ( GUI_LookAndFeel )
 };
