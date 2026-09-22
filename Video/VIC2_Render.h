@@ -133,6 +133,10 @@ public:
 	[[ nodiscard ]] int getNumFields () const	{	return numFields;	}
 	void nextField ()	{	curField = ( curField + 1 ) % numFields;	}
 
+	// A loaded picture made of double-width pixels only; any single hires
+	// pixel in any field makes it hires
+	[[ nodiscard ]] bool isMulticolor () const	{	return multicolor;	}
+
 	// C64 image size (without borders)
 	static constexpr auto	innerUnscaledWidth = 320;
 	static constexpr auto	innerUnscaledHeight = 200;
@@ -207,6 +211,10 @@ private:
 
 	int		numFields = 1;
 	int		curField = 0;
+	bool	multicolor = false;
+
+	// Any horizontal pixel pair of the inner screen that differs
+	[[ nodiscard ]] bool hasHiresPixels () const;
 
 	bool		borderInFilename = false;
 };

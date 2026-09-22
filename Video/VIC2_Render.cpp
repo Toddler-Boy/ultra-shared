@@ -1,6 +1,5 @@
 #include <JuceHeader.h>
 
-#include <bit>
 #include <cstring>
 #include <numbers>
 
@@ -41,6 +40,7 @@ bool VIC2_Render::loadImage ( const char* filename, const void* data, const size
 	indexBufferWidth = 0;
 	numFields = 1;
 	curField = 0;
+	multicolor = false;
 
 	if ( ! juce::String ( filename ).endsWithIgnoreCase ( ".png" ) )
 		return false;
@@ -88,11 +88,16 @@ void VIC2_Render::fillAll ( const uint8_t innerCol )
 }
 //-----------------------------------------------------------------------------
 
-// Match image colors to vic2-palette indices. Distinct source colors mean
-// distinct hardware indices, so pick the one-to-one assignment with the
-// smallest total distance over all colors; returns one index per input color
+// Match image colors to vic2-palette indices, one per input color. Distinct source
+// colors get distinct indices while each stays within maxDetour of its nearest; beyond that they share
 static std::vector<uint8_t> matchToVIC2 ( const std::vector<uint32_t>& imgPalette, const colodore::rgbPalette& refPalette )
 {
+	// Screenshot survey: genuine detours stay below 850, forced ones start above 1050
+	constexpr auto	maxDetour = 1000;
+
+	// Dwarfs any sum of in-budget distances, so fewer shares always win
+	constexpr auto	sharePenalty = 1 << 24;
+
 	// Distance function
 	auto distanceRGB = [] ( const uint32_t imgCol, const uint32_t refCol )
 	{
@@ -118,54 +123,70 @@ static std::vector<uint8_t> matchToVIC2 ( const std::vector<uint32_t>& imgPalett
 
 	std::array<std::array<int, 16>, 16>	cost {};
 	for ( auto pos = 0; pos < numColors; ++pos )
+	{
+		auto&	row = cost[ pos ];
 		for ( auto index = 0; index < numIndices; ++index )
-			cost[ pos ][ index ] = distanceRGB ( imgPalette[ pos ], refPalette[ index ] );
+			row[ index ] = distanceRGB ( imgPalette[ pos ], refPalette[ index ] );
 
-	// dp[mask] = cheapest assignment of the first popcount(mask) colors to exactly the indices in mask;
-	// masks only grow, so ascending order finalizes each entry before it is extended
-	std::vector<int>		dp ( size_t ( 1 ) << numIndices, INT_MAX );
-	std::vector<uint8_t>	lastIndex ( size_t ( 1 ) << numIndices, 0 );
+		const auto	limit = *std::ranges::min_element ( row ) + maxDetour;
+		for ( auto& c : row )
+			if ( c > limit )
+				c = INT_MAX;
+	}
+
+	// dp[mask] = cheapest assignment of the colors so far using exactly the indices in mask;
+	// step records per color and mask the index taken, high bit set when it was shared
+	const auto	numMasks = size_t ( 1 ) << numIndices;
+
+	std::vector<int>		dp ( numMasks, INT_MAX );
+	std::vector<int>		next ( numMasks );
+	std::vector<uint8_t>	step ( numMasks * size_t ( numColors ) );
+
+	constexpr uint8_t	sharedBit = 0x80;
 
 	dp[ 0 ] = 0;
-	for ( auto mask = 0; mask < int ( dp.size () ); ++mask )
+	for ( auto pos = 0; pos < numColors; ++pos )
 	{
-		if ( dp[ mask ] == INT_MAX )
-			continue;
+		std::ranges::fill ( next, INT_MAX );
 
-		const auto	pos = std::popcount ( unsigned ( mask ) );
-		if ( pos >= numColors )
-			continue;
-
-		for ( auto index = 0; index < numIndices; ++index )
+		for ( size_t mask = 0; mask < numMasks; ++mask )
 		{
-			if ( mask & ( 1 << index ) )
+			if ( dp[ mask ] == INT_MAX )
 				continue;
 
-			const auto	next = mask | ( 1 << index );
-			if ( const auto total = dp[ mask ] + cost[ pos ][ index ]; total < dp[ next ] )
+			for ( auto index = 0; index < numIndices; ++index )
 			{
-				dp[ next ] = total;
-				lastIndex[ next ] = uint8_t ( index );
+				if ( cost[ pos ][ index ] == INT_MAX )
+					continue;
+
+				const auto	shared = ( mask & ( 1u << index ) ) != 0;
+				const auto	total = dp[ mask ] + cost[ pos ][ index ] + ( shared ? sharePenalty : 0 );
+				const auto	nextMask = mask | ( 1u << index );
+
+				if ( total < next[ nextMask ] )
+				{
+					next[ nextMask ] = total;
+					step[ size_t ( pos ) * numMasks + nextMask ] = uint8_t ( index ) | ( shared ? sharedBit : 0 );
+				}
 			}
 		}
+
+		std::swap ( dp, next );
 	}
 
 	// Cheapest complete assignment, then walk it backwards to recover each color's index
-	auto	bestMask = 0;
-	auto	bestTotal = INT_MAX;
-	for ( auto mask = 0; mask < int ( dp.size () ); ++mask )
-		if ( std::popcount ( unsigned ( mask ) ) == numColors && dp[ mask ] < bestTotal )
-		{
-			bestTotal = dp[ mask ];
-			bestMask = mask;
-		}
+	auto	mask = size_t ( std::ranges::min_element ( dp ) - dp.begin () );
 
 	std::vector<uint8_t>	out ( imgPalette.size () );
-	for ( auto mask = bestMask; mask; )
+	for ( auto pos = numColors - 1; pos >= 0; --pos )
 	{
-		const auto	index = lastIndex[ mask ];
-		out[ size_t ( std::popcount ( unsigned ( mask ) ) - 1 ) ] = index;
-		mask &= ~( 1 << index );
+		const auto	taken = step[ size_t ( pos ) * numMasks + mask ];
+		const auto	index = uint8_t ( taken & ~sharedBit );
+
+		out[ size_t ( pos ) ] = index;
+
+		if ( ! ( taken & sharedBit ) )
+			mask &= ~( size_t ( 1 ) << index );
 	}
 	return out;
 }
@@ -193,6 +214,7 @@ void VIC2_Render::storeFields ( const char* filename, const T* src, const int wi
 	const auto	rowByteSkip = inner ? unscaledBorderSizeX * 2 : 0;
 
 	numFields = fields;
+	multicolor = true;
 
 	for ( auto field = fields - 1; field >= 0; --field )
 	{
@@ -206,6 +228,9 @@ void VIC2_Render::storeFields ( const char* filename, const T* src, const int wi
 
 			dst += rowByteSkip;
 		}
+
+		if ( hasHiresPixels () )
+			multicolor = false;
 
 		// The picture replaced whatever renderScreen drew
 		invalidate ();
@@ -337,6 +362,7 @@ bool VIC2_Render::loadPETSCII ( const char* filename )
 	indexBufferWidth = 0;
 	numFields = 1;
 	curField = 0;
+	multicolor = false;
 
 	auto	name = juce::String ( filename );
 	auto	file = juce::File ( filename );
@@ -735,6 +761,21 @@ void VIC2_Render::convertToRGB ()
 
 		gin::applyBlend ( rgbBuffer, gin::BlendMode::Lighten, color );
 	}
+}
+//-----------------------------------------------------------------------------
+
+bool VIC2_Render::hasHiresPixels () const
+{
+	for ( auto y = 0; y < innerUnscaledHeight; ++y )
+	{
+		const auto*	row = indexPixels + ( y + unscaledBorderSizeY ) * outerUnscaledWidth + unscaledBorderSizeX;
+
+		for ( auto x = 0; x < innerUnscaledWidth; x += 2 )
+			if ( row[ x ] != row[ x + 1 ] )
+				return true;
+	}
+
+	return false;
 }
 //-----------------------------------------------------------------------------
 

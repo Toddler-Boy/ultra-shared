@@ -27,9 +27,13 @@ imageutils::imageHint imageutils::hintFromFilename ( const juce::String& in )
 	auto	hintStr = stem.containsChar ( '#' ) ? stem.fromLastOccurrenceOf ( "#", false, false ).toUpperCase () : juce::String ();
 
 	hint.firstLuma = hintStr.containsChar ( 'Y' );
-	hint.isGameScreen = hintStr.containsChar ( 'G' );
+	hint.forceNTSC = hintStr.containsChar ( 'N' );
 
-	hintStr = hintStr.removeCharacters ( "YG" );
+	if ( hintStr.containsChar ( 'T' ) )			hint.kind = screenKind::title;
+	else if ( hintStr.containsChar ( 'G' ) )	hint.kind = screenKind::game;
+	else if ( hintStr.containsChar ( 'L' ) )	hint.kind = screenKind::loading;
+
+	hintStr = hintStr.removeCharacters ( "YNTGL" );
 
 	// Last parameter left over is always border color
 	if ( hintStr.isNotEmpty () )
@@ -46,8 +50,16 @@ juce::String imageutils::filenameFromHint ( const imageutils::imageHint& hint )
 
 	auto	hintStr = juce::String ();
 
-	if ( hint.isGameScreen )		hintStr += "G";
+	switch ( hint.kind )
+	{
+		case screenKind::title:		hintStr += "T";	break;
+		case screenKind::game:		hintStr += "G";	break;
+		case screenKind::loading:	hintStr += "L";	break;
+		case screenKind::none:		break;
+	}
+
 	if ( hint.firstLuma )			hintStr += "Y";
+	if ( hint.forceNTSC )			hintStr += "N";
 	if ( hint.borderColor >= 0 && hint.borderColor < 16 )
 		hintStr += hexDigits[ hint.borderColor ];
 
