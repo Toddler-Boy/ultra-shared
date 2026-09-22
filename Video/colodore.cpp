@@ -4,6 +4,14 @@
 
 //-----------------------------------------------------------------------------
 
+constexpr auto	gammasrc = 2.8f;		// PAL
+constexpr auto	gammatgt = 2.2f;		// sRGB
+
+constexpr auto	chromaSector = 360.0f / 16.0f;
+constexpr auto	chromaOriginPAL = chromaSector / 2.0f;
+
+//-----------------------------------------------------------------------------
+
 colodore::colodore ()
 {
 	// Pre-calculate gamma-map
@@ -11,9 +19,6 @@ colodore::colodore ()
 
 	constexpr auto gamma_pepto = [] ( float value ) -> uint8_t
 	{
-		constexpr auto	gammasrc = 2.8f;		// PAL
-		constexpr auto	gammatgt = 2.2f;		// sRGB
-
 		// reverse gamma correction of source
 		static auto	srcFactor = std::pow ( 255.0f, 1.0f - gammasrc );
 		value = std::clamp ( srcFactor * std::pow ( value, gammasrc ), 0.0f, 255.0f );
@@ -44,10 +49,9 @@ colodore::yuvPalette colodore::generateYUV ( const int standard, float brightnes
 
 	constexpr auto	lumaFactor = 256.0f / 32.0f;
 
-	constexpr auto	chromaSector = 360.0f / 16.0f;
 	constexpr auto	chromaRadian = std::numbers::pi_v<float> / 180.0f;
 
-	const auto	chromaOrigin = chromaSector / 2.0f - ( standard ? 33.0f : 0.0f );
+	const auto	chromaOrigin = chromaOriginPAL - ( standard ? 33.0f : 0.0f );
 
 	for ( auto i = 0; auto eLcLaS : firstL_revL_Angle )
 	{
@@ -96,10 +100,8 @@ colodore::shaderPalette colodore::generateYUV_YIQ ( const bool earlyLuma /*= fal
 
 	constexpr auto	lumaFactor = 1.0f / 32.0f;
 
-	constexpr auto	chromaSector = 360.0f / 16.0f;
 	constexpr auto	chromaRadian = std::numbers::pi_v<float> / 180.0f;
 
-	constexpr auto	chromaOriginPAL = chromaSector / 2.0f;
 	constexpr auto	chromaOriginNTSC = chromaOriginPAL - 33.0f;
 
 	constexpr auto	chromaScale = 100.0f / 256.0f;
@@ -173,5 +175,40 @@ colodore::rgbPalette colodore::generateRGB ( const int standard, const yuvPalett
 	}
 
 	return dst;
+}
+//-----------------------------------------------------------------------------
+
+std::optional<float> colodore::chromaAngle ( const int index ) const
+{
+	const auto	angleSrc = firstL_revL_Angle[ index ][ 2 ];
+	if ( angleSrc == 0 )
+		return std::nullopt;
+
+	return chromaOriginPAL + angleSrc * chromaSector;
+}
+//-----------------------------------------------------------------------------
+
+colodore::polar colodore::rgb2polar ( const uint32_t rgb ) const
+{
+	const auto	r = float ( ( rgb >> 16 ) & 0xFF );
+	const auto	g = float ( ( rgb >> 8 ) & 0xFF );
+	const auto	b = float ( rgb & 0xFF );
+
+	auto ungamma = [] ( const float value )
+	{
+		return 255.0f * std::pow ( value / 255.0f, gammatgt / gammasrc );
+	};
+
+	const auto	lr = ungamma ( r );
+	const auto	lg = ungamma ( g );
+	const auto	lb = ungamma ( b );
+
+	const auto	ly = 0.299f * lr + 0.587f * lg + 0.114f * lb;
+	const auto	v = ( lr - ly ) / 1.140f;
+	const auto	u = ( lb - ly ) / 2.029f;
+
+	constexpr auto	degree = 180.0f / std::numbers::pi_v<float>;
+
+	return { 0.299f * r + 0.587f * g + 0.114f * b, std::hypot ( u, v ), std::atan2 ( v, u ) * degree };
 }
 //-----------------------------------------------------------------------------

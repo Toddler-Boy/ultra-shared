@@ -15,6 +15,7 @@
 #include <algorithm>
 #include <array>
 #include <cstdint>
+#include <optional>
 #include <vector>
 
 //-----------------------------------------------------------------------------
@@ -29,6 +30,14 @@ public:
 
 	[[ nodiscard ]] yuvPalette generateYUV ( const int standard, float brightness = 50.0f, float contrast = 100.0f, float saturation = 50.0f, const bool earlyLuma = false, const float warmth = 0.0f ) const;
 	[[ nodiscard ]] rgbPalette generateRGB ( const int standard, const yuvPalette& src ) const;
+
+	// Hue of a palette index on the PAL chroma circle in degrees; the neutrals have none
+	[[ nodiscard ]] std::optional<float> chromaAngle ( const int index ) const;
+
+	// An sRGB color brought back onto the PAL chroma circle: the gamma map and the
+	// YUV matrix undone. Luma stays on the sRGB scale
+	struct polar { float luma; float chroma; float hue; };
+	[[ nodiscard ]] polar rgb2polar ( const uint32_t rgb ) const;
 
 	[[ nodiscard ]] inline uint32_t yuv2rgb ( const uint8_t y, const float u, const float v ) const
 	{
