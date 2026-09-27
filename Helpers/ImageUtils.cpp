@@ -28,12 +28,9 @@ imageutils::imageHint imageutils::hintFromFilename ( const juce::String& in )
 
 	hint.firstLuma = hintStr.containsChar ( 'Y' );
 	hint.forceNTSC = hintStr.containsChar ( 'N' );
+	hint.loadingScreen = hintStr.containsChar ( 'L' );
 
-	if ( hintStr.containsChar ( 'T' ) )			hint.kind = screenKind::title;
-	else if ( hintStr.containsChar ( 'G' ) )	hint.kind = screenKind::game;
-	else if ( hintStr.containsChar ( 'L' ) )	hint.kind = screenKind::loading;
-
-	hintStr = hintStr.removeCharacters ( "YNTGL" );
+	hintStr = hintStr.removeCharacters ( "YNL" );
 
 	// Last parameter left over is always border color
 	if ( hintStr.isNotEmpty () )
@@ -50,14 +47,7 @@ juce::String imageutils::filenameFromHint ( const imageutils::imageHint& hint )
 
 	auto	hintStr = juce::String ();
 
-	switch ( hint.kind )
-	{
-		case screenKind::title:		hintStr += "T";	break;
-		case screenKind::game:		hintStr += "G";	break;
-		case screenKind::loading:	hintStr += "L";	break;
-		case screenKind::none:		break;
-	}
-
+	if ( hint.loadingScreen )		hintStr += "L";
 	if ( hint.firstLuma )			hintStr += "Y";
 	if ( hint.forceNTSC )			hintStr += "N";
 	if ( hint.borderColor >= 0 && hint.borderColor < 16 )
