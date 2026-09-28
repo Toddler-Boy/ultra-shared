@@ -29,8 +29,9 @@ imageutils::imageHint imageutils::hintFromFilename ( const juce::String& in )
 	hint.firstLuma = hintStr.containsChar ( 'Y' );
 	hint.forceNTSC = hintStr.containsChar ( 'N' );
 	hint.loadingScreen = hintStr.containsChar ( 'L' );
+	hint.interlaced = hintStr.containsChar ( 'I' );
 
-	hintStr = hintStr.removeCharacters ( "YNL" );
+	hintStr = hintStr.removeCharacters ( "YNLI" );
 
 	// Last parameter left over is always border color
 	if ( hintStr.isNotEmpty () )
@@ -48,6 +49,7 @@ juce::String imageutils::filenameFromHint ( const imageutils::imageHint& hint )
 	auto	hintStr = juce::String ();
 
 	if ( hint.loadingScreen )		hintStr += "L";
+	if ( hint.interlaced )			hintStr += "I";
 	if ( hint.firstLuma )			hintStr += "Y";
 	if ( hint.forceNTSC )			hintStr += "N";
 	if ( hint.borderColor >= 0 && hint.borderColor < 16 )

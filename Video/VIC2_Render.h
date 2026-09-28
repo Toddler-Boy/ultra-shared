@@ -57,8 +57,8 @@ class VIC2_Render final
 public:
 	VIC2_Render ( const bool withBackup );
 
-	// Load image from file (*.png). A picture of doubled height (320x400,
-	// 384x544) is two interlace fields stacked top to bottom
+	// Load image from file (*.png). Doubled height with the interlace hint = two stacked fields,
+	// any other size above 320x200 = a borderless picture area seen through the screen window
 	bool loadImage ( const char* filename );
 
 	// Same, with the bytes supplied by the caller (factory data from the pak);
@@ -128,6 +128,12 @@ public:
 
 	void restoreIndexBuffer ();
 
+	// How far a picture larger than the screen window can move, 0 when it fits;
+	// setScroll clamps, restoreIndexBuffer shows the new position
+	[[ nodiscard ]] int getScrollRangeX () const	{	return canvas.empty () ? 0 : canvasWidth - innerUnscaledWidth;		}
+	[[ nodiscard ]] int getScrollRangeY () const	{	return canvas.empty () ? 0 : canvasHeight - innerUnscaledHeight;	}
+	void setScroll ( const int x, const int y );
+
 	// An interlaced picture keeps both fields; restoreIndexBuffer brings
 	// back the current one
 	[[ nodiscard ]] int getNumFields () const	{	return numFields;	}
@@ -172,6 +178,8 @@ private:
 	template <typename T, typename F>
 	void storeFields ( const char* filename, const T* src, const int width, const int fields, F convert );
 
+	void storeCanvas ( const char* filename, std::vector<uint8_t> indices, const int width, const int height );
+
 	juce::SharedResourcePointer<VIC2_Render_Data>	characterData;
 
 	void findBorderColor ( const char* filename );
@@ -212,6 +220,14 @@ private:
 	int		numFields = 1;
 	int		curField = 0;
 	bool	multicolor = false;
+
+	// A picture larger than the screen window, as palette indices
+	void clearCanvas ();
+	std::vector<uint8_t>	canvas;
+	int		canvasWidth = 0;
+	int		canvasHeight = 0;
+	int		scrollX = 0;
+	int		scrollY = 0;
 
 	// Any horizontal pixel pair of the inner screen that differs
 	[[ nodiscard ]] bool hasHiresPixels () const;

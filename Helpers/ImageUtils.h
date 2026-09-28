@@ -14,6 +14,7 @@ namespace imageutils
 		bool			firstLuma = false;
 		bool			forceNTSC = false;		// PAL unless the picture says so
 		bool			loadingScreen = false;
+		bool			interlaced = false;		// two fields stacked top to bottom
 	};
 
 	[[ nodiscard ]] imageHint hintFromFilename ( const juce::String& in );
