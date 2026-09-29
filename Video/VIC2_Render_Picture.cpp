@@ -25,7 +25,6 @@ bool VIC2_Render::loadImage ( const char* filename, const void* data, const size
 	indexBufferWidth = 0;
 	numFields = 1;
 	curField = 0;
-	multicolor = false;
 	clearCanvas ();
 
 	if ( ! juce::String ( filename ).endsWithIgnoreCase ( ".png" ) )
@@ -78,7 +77,6 @@ void VIC2_Render::storeFields ( const char* filename, const T* src, const int wi
 	const auto	rowByteSkip = inner ? unscaledBorderSizeX * 2 : 0;
 
 	numFields = fields;
-	multicolor = true;
 
 	for ( auto field = fields - 1; field >= 0; --field )
 	{
@@ -92,9 +90,6 @@ void VIC2_Render::storeFields ( const char* filename, const T* src, const int wi
 
 			dst += rowByteSkip;
 		}
-
-		if ( hasHiresPixels () )
-			multicolor = false;
 
 		// The picture replaced whatever renderScreen drew
 		invalidate ();
@@ -257,17 +252,21 @@ void VIC2_Render::findBorderColor ( const char* _filename )
 }
 //-----------------------------------------------------------------------------
 
-bool VIC2_Render::hasHiresPixels () const
+uint16_t VIC2_Render::analyze () const
 {
-	for ( auto y = 0; y < innerUnscaledHeight; ++y )
+	if ( ! canvas.empty () )
+		return pictureanalyzer::analyze ( { canvas.data (), canvasWidth, canvasHeight, canvasWidth, nullptr } );
+
+	auto field = [ & ] ( const uint8_t* frame )
 	{
-		const auto*	row = indexPixels + ( y + unscaledBorderSizeY ) * outerUnscaledWidth + unscaledBorderSizeX;
+		return pictureanalyzer::analyze ( { frame + unscaledBorderSizeY * outerUnscaledWidth + unscaledBorderSizeX, innerUnscaledWidth, innerUnscaledHeight,
+											outerUnscaledWidth, indexBufferWidth == outerUnscaledWidth ? frame : nullptr } );
+	};
 
-		for ( auto x = 0; x < innerUnscaledWidth; x += 2 )
-			if ( row[ x ] != row[ x + 1 ] )
-				return true;
-	}
+	// A second field lives in the backup only
+	if ( numFields == 1 )
+		return field ( indexPixels );
 
-	return false;
+	return pictureanalyzer::combine ( field ( indexBufferBackup.data () ), field ( indexBufferBackup.data () + outerUnscaledLength ) );
 }
 //-----------------------------------------------------------------------------

@@ -26,7 +26,6 @@ bool VIC2_Render::loadPETSCII ( const char* filename )
 	indexBufferWidth = 0;
 	numFields = 1;
 	curField = 0;
-	multicolor = false;
 	clearCanvas ();
 
 	auto	name = juce::String ( filename );

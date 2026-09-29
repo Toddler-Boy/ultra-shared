@@ -46,19 +46,6 @@ void VIC2_Render::storeCanvas ( const char* filename, std::vector<uint8_t> indic
 	scrollX = 0;
 	scrollY = 0;
 
-	multicolor = true;
-	for ( auto y = 0; y < height && multicolor; ++y )
-	{
-		const auto*	row = canvas.data () + size_t ( y ) * size_t ( width );
-
-		for ( auto x = 0; x + 1 < width; x += 2 )
-			if ( row[ x ] != row[ x + 1 ] )
-			{
-				multicolor = false;
-				break;
-			}
-	}
-
 	// The picture replaced whatever renderScreen drew; the border comes from the name
 	invalidate ();
 	indexBufferWidth = innerUnscaledWidth;

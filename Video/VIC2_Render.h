@@ -3,6 +3,7 @@
 #include <JuceHeader.h>
 
 #include "colodore.h"
+#include "PictureAnalyzer.h"
 
 namespace pngloader { struct image; }
 
@@ -139,9 +140,8 @@ public:
 	[[ nodiscard ]] int getNumFields () const	{	return numFields;	}
 	void nextField ()	{	curField = ( curField + 1 ) % numFields;	}
 
-	// A loaded picture made of double-width pixels only; any single hires
-	// pixel in any field makes it hires
-	[[ nodiscard ]] bool isMulticolor () const	{	return multicolor;	}
+	// The loaded picture's C64 properties, on demand: loading never pays for it
+	[[ nodiscard ]] uint16_t analyze () const;
 
 	// C64 image size (without borders)
 	static constexpr auto	innerUnscaledWidth = 320;
@@ -219,7 +219,6 @@ private:
 
 	int		numFields = 1;
 	int		curField = 0;
-	bool	multicolor = false;
 
 	// A picture larger than the screen window, as palette indices
 	void clearCanvas ();
@@ -228,9 +227,6 @@ private:
 	int		canvasHeight = 0;
 	int		scrollX = 0;
 	int		scrollY = 0;
-
-	// Any horizontal pixel pair of the inner screen that differs
-	[[ nodiscard ]] bool hasHiresPixels () const;
 
 	bool		borderInFilename = false;
 };
