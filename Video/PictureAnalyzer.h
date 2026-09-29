@@ -27,6 +27,16 @@ namespace pictureanalyzer
 
 	[[ nodiscard ]] uint16_t analyze ( const picture& pic );
 
+	// Where the screen really sits in a framed picture, frame coordinates; pic.pixels is
+	// where the caller expects it
+	struct position
+	{
+		int	x = 0;
+		int	y = 0;
+	};
+
+	[[ nodiscard ]] position screenPosition ( const picture& pic );
+
 	// Both interlace fields make one picture
 	[[ nodiscard ]] uint16_t combine ( const uint16_t a, const uint16_t b );
 }

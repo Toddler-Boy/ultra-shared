@@ -180,6 +180,9 @@ private:
 
 	void storeCanvas ( const char* filename, std::vector<uint8_t> indices, const int width, const int height );
 
+	// A framed picture exported off-center moves its screen to the standard window, for display
+	void centerScreen ();
+
 	juce::SharedResourcePointer<VIC2_Render_Data>	characterData;
 
 	void findBorderColor ( const char* filename );

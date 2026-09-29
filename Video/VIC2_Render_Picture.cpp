@@ -69,6 +69,32 @@ static std::vector<uint8_t> toIndices ( const T* src, const int width, const int
 }
 //-----------------------------------------------------------------------------
 
+void VIC2_Render::centerScreen ()
+{
+	const pictureanalyzer::picture	frame { indexPixels + unscaledBorderSizeY * outerUnscaledWidth + unscaledBorderSizeX, innerUnscaledWidth, innerUnscaledHeight,
+											outerUnscaledWidth, indexPixels };
+
+	const auto	at = pictureanalyzer::screenPosition ( frame );
+	const auto	dx = unscaledBorderSizeX - at.x;
+	const auto	dy = unscaledBorderSizeY - at.y;
+
+	if ( dx == 0 && dy == 0 )
+		return;
+
+	// Lines and columns moved in from outside repeat the frame's edge
+	const std::vector<uint8_t>	src ( indexPixels, indexPixels + outerUnscaledLength );
+
+	for ( auto y = 0; y < outerUnscaledHeight; ++y )
+	{
+		const auto*	row = src.data () + std::clamp ( y - dy, 0, outerUnscaledHeight - 1 ) * outerUnscaledWidth;
+		auto*		out = indexPixels + y * outerUnscaledWidth;
+
+		for ( auto x = 0; x < outerUnscaledWidth; ++x )
+			out[ x ] = row[ std::clamp ( x - dx, 0, outerUnscaledWidth - 1 ) ];
+	}
+}
+//-----------------------------------------------------------------------------
+
 template <typename T, typename F>
 void VIC2_Render::storeFields ( const char* filename, const T* src, const int width, const int fields, F convert )
 {
@@ -90,6 +116,9 @@ void VIC2_Render::storeFields ( const char* filename, const T* src, const int wi
 
 			dst += rowByteSkip;
 		}
+
+		if ( ! inner )
+			centerScreen ();
 
 		// The picture replaced whatever renderScreen drew
 		invalidate ();

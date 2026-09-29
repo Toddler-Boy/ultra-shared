@@ -1,6 +1,6 @@
 #include <algorithm>
 #include <climits>
-#include <vector>
+#include <cstdlib>
 
 #include "PictureAnalyzer.h"
 
@@ -23,8 +23,10 @@ namespace
 		return count;
 	}
 
-	// Exports place the screen a few lines off: it sits where the fewest border changes off
-	// the 8 pixel grid are left (picture detail outside it makes them), nearest on a tie
+	// Exports place the screen a few lines off. A line with a colour change off the 8 pixel
+	// grid between the screen's columns holds graphics; raster splits and plain lines do
+	// not. When all such lines fit one screen it sits over them, nearest when that leaves
+	// room; graphics above or below it (sprites) leave everything where it is
 	int screenTop ( const pictureanalyzer::picture& pic, const int frameHeight )
 	{
 		constexpr auto	maxShift = 8;
@@ -32,50 +34,78 @@ namespace
 		const auto	offset = int ( pic.pixels - pic.frame );
 		const auto	borderX = offset % pic.stride;
 		const auto	borderY = offset / pic.stride;
-		const auto	frameWidth = pic.stride;
 
-		std::vector<int>	lineChanges ( size_t ( frameHeight ), 0 );
-		std::vector<int>	sideChanges ( size_t ( frameHeight ), 0 );
+		auto	minY = INT_MAX;
+		auto	maxY = -1;
 
 		for ( auto y = 0; y < frameHeight; ++y )
 		{
-			const auto*	row = pic.frame + size_t ( y ) * size_t ( frameWidth );
+			const auto*	row = pic.frame + size_t ( y ) * size_t ( pic.stride );
 
-			for ( auto x = 1; x < frameWidth; ++x )
+			for ( auto x = borderX + 1; x < borderX + pic.width; ++x )
 			{
-				if ( row[ x ] == row[ x - 1 ] || ( ( x - borderX ) & 7 ) == 0 )
-					continue;
-
-				++lineChanges[ size_t ( y ) ];
-
-				if ( x < borderX || x > frameWidth - borderX )
-					++sideChanges[ size_t ( y ) ];
-			}
-		}
-
-		auto	best = borderY;
-		auto	fewest = INT_MAX;
-
-		for ( auto shift = 0; shift <= maxShift; ++shift )
-		{
-			for ( const auto top : { borderY - shift, borderY + shift } )
-			{
-				if ( top < 0 || top + pic.height > frameHeight )
-					continue;
-
-				auto	changes = 0;
-				for ( auto y = 0; y < frameHeight; ++y )
-					changes += y >= top && y < top + pic.height ? sideChanges[ size_t ( y ) ] : lineChanges[ size_t ( y ) ];
-
-				if ( changes < fewest )
+				if ( row[ x ] != row[ x - 1 ] && ( ( x - borderX ) & 7 ) != 0 )
 				{
-					fewest = changes;
-					best = top;
+					minY = std::min ( minY, y );
+					maxY = y;
+					break;
 				}
 			}
 		}
 
-		return best;
+		const auto	low = std::max ( 0, maxY - ( pic.height - 1 ) );
+		const auto	high = std::min ( minY, frameHeight - pic.height );
+
+		if ( maxY < 0 || low > high )
+			return borderY;
+
+		// Exports are off by a few lines; farther means art in one border only
+		const auto	top = std::clamp ( borderY, low, high );
+		return std::abs ( top - borderY ) <= maxShift ? top : borderY;
+	}
+
+	// With both frame edges one colour on every screen line (plain sides, sprites at most
+	// above and below), the window sits over the picture's content, nearest when that
+	// leaves room; side graphics keep the caller's column
+	int screenLeft ( const pictureanalyzer::picture& pic, const int top )
+	{
+		const auto	borderX = int ( pic.pixels - pic.frame ) % pic.stride;
+		const auto	frameWidth = pic.stride;
+
+		auto	minX = INT_MAX;
+		auto	maxX = -1;
+
+		for ( auto y = top; y < top + pic.height; ++y )
+		{
+			const auto*	row = pic.frame + size_t ( y ) * size_t ( frameWidth );
+			const auto	side = row[ 0 ];
+
+			if ( row[ frameWidth - 1 ] != side )
+				return borderX;
+
+			for ( auto x = 0; x < frameWidth; ++x )
+			{
+				if ( row[ x ] != side )
+				{
+					minX = std::min ( minX, x );
+					maxX = std::max ( maxX, x );
+				}
+			}
+		}
+
+		const auto	low = std::max ( 0, maxX - ( pic.width - 1 ) );
+		const auto	high = std::min ( minX, frameWidth - pic.width );
+
+		if ( maxX < 0 || low > high )
+			return borderX;
+
+		return std::clamp ( borderX, low, high );
+	}
+
+	// The caller's screen position has equal borders above and below
+	int frameHeightOf ( const pictureanalyzer::picture& pic )
+	{
+		return pic.height + int ( pic.pixels - pic.frame ) / pic.stride * 2;
 	}
 
 	// Border colour changes happen on CPU cycles, 8 pixels on the screen's grid, or from
@@ -152,10 +182,17 @@ namespace
 }
 //-----------------------------------------------------------------------------
 
+pictureanalyzer::position pictureanalyzer::screenPosition ( const picture& pic )
+{
+	const auto	top = screenTop ( pic, frameHeightOf ( pic ) );
+
+	return { screenLeft ( pic, top ), top };
+}
+//-----------------------------------------------------------------------------
+
 uint16_t pictureanalyzer::analyze ( const picture& input )
 {
-	// The caller's screen position has equal borders above and below
-	const auto	frameHeight = input.frame ? input.height + int ( input.pixels - input.frame ) / input.stride * 2 : 0;
+	const auto	frameHeight = input.frame ? frameHeightOf ( input ) : 0;
 
 	auto	pic = input;
 	if ( pic.frame )
