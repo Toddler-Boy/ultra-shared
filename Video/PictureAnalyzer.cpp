@@ -121,6 +121,7 @@ namespace
 
 		auto	previousEdge = -1;
 		auto	sideSprites = false;
+		auto	sideArt = false;
 
 		auto scan = [ & ] ( const uint8_t* row, const int from, const int to, bool& onGrid, bool& offGrid )
 		{
@@ -144,6 +145,15 @@ namespace
 
 				if ( offGrid )
 					flags |= pictureanalyzer::borderSprites;
+
+				// A plain line there is border colour too, a split where the screen starts shows only here
+				if ( ! onGrid && ! offGrid )
+				{
+					if ( previousEdge >= 0 && row[ 0 ] != previousEdge )
+						flags |= pictureanalyzer::rasterSplits;
+
+					previousEdge = row[ 0 ];
+				}
 
 				continue;
 			}
@@ -170,11 +180,16 @@ namespace
 
 				previousEdge = row[ 0 ];
 			}
+			else
+				sideArt = true;
 		}
 
-		// Sprites beside the screen mean opened side borders, which show the background
-		// colour there; that looks like a raster split but is not one
-		if ( sideSprites )
+		// Side borders not one colour on both sides of every line hold artwork, sprites in
+		// practice; their colour changes are no raster splits
+		if ( sideArt )
+			flags |= pictureanalyzer::borderSprites;
+
+		if ( sideSprites || sideArt )
 			flags &= uint16_t ( ~pictureanalyzer::rasterSplits );
 
 		return flags;
