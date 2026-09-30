@@ -93,9 +93,12 @@ void VIC2_Render::restoreIndexBuffer ()
 	{
 		fillBorder ();
 
+		const auto	windowWidth = canvasWindowWidth ();
+		const auto	windowX = ( outerUnscaledWidth - windowWidth ) / 2;
+
 		for ( auto y = 0; y < innerUnscaledHeight; ++y )
-			std::copy_n ( canvas.data () + size_t ( y + scrollY ) * size_t ( canvasWidth ) + size_t ( scrollX ), innerUnscaledWidth,
-						  indexPixels + ( y + unscaledBorderSizeY ) * outerUnscaledWidth + unscaledBorderSizeX );
+			std::copy_n ( canvas.data () + size_t ( y + scrollY ) * size_t ( canvasWidth ) + size_t ( scrollX ), windowWidth,
+						  indexPixels + ( y + unscaledBorderSizeY ) * outerUnscaledWidth + windowX );
 		return;
 	}
 

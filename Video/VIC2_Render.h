@@ -131,7 +131,7 @@ public:
 
 	// How far a picture larger than the screen window can move, 0 when it fits;
 	// setScroll clamps, restoreIndexBuffer shows the new position
-	[[ nodiscard ]] int getScrollRangeX () const	{	return canvas.empty () ? 0 : canvasWidth - innerUnscaledWidth;		}
+	[[ nodiscard ]] int getScrollRangeX () const	{	return canvas.empty () ? 0 : canvasWidth - canvasWindowWidth ();	}
 	[[ nodiscard ]] int getScrollRangeY () const	{	return canvas.empty () ? 0 : canvasHeight - innerUnscaledHeight;	}
 	void setScroll ( const int x, const int y );
 
@@ -228,6 +228,9 @@ private:
 	std::vector<uint8_t>	canvas;
 	int		canvasWidth = 0;
 	int		canvasHeight = 0;
+
+	// A picture exactly screen-wide opens the side borders (sprites there), the top and bottom stay closed
+	[[ nodiscard ]] int canvasWindowWidth () const	{	return canvasWidth == outerUnscaledWidth ? outerUnscaledWidth : innerUnscaledWidth;	}
 	int		scrollX = 0;
 	int		scrollY = 0;
 
