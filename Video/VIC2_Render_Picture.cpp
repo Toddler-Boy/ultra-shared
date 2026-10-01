@@ -25,6 +25,7 @@ bool VIC2_Render::loadImage ( const char* filename, const void* data, const size
 	indexBufferWidth = 0;
 	numFields = 1;
 	curField = 0;
+	screenShift = {};
 	clearCanvas ();
 
 	if ( ! juce::String ( filename ).endsWithIgnoreCase ( ".png" ) )
@@ -77,6 +78,8 @@ void VIC2_Render::centerScreen ()
 	const auto	at = pictureanalyzer::screenPosition ( frame );
 	const auto	dx = unscaledBorderSizeX - at.x;
 	const auto	dy = unscaledBorderSizeY - at.y;
+
+	screenShift = { dx, dy };
 
 	if ( dx == 0 && dy == 0 )
 		return;

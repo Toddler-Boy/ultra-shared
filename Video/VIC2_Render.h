@@ -132,7 +132,7 @@ public:
 	// How far a picture larger than the screen window can move, 0 when it fits;
 	// setScroll clamps, restoreIndexBuffer shows the new position
 	[[ nodiscard ]] int getScrollRangeX () const	{	return canvas.empty () ? 0 : canvasWidth - canvasWindowWidth ();	}
-	[[ nodiscard ]] int getScrollRangeY () const	{	return canvas.empty () ? 0 : canvasHeight - innerUnscaledHeight;	}
+	[[ nodiscard ]] int getScrollRangeY () const	{	return canvas.empty () ? 0 : canvasHeight - canvasWindowHeight ();	}
 	void setScroll ( const int x, const int y );
 
 	// An interlaced picture keeps both fields; restoreIndexBuffer brings
@@ -142,6 +142,9 @@ public:
 
 	// The loaded picture's C64 properties, on demand: loading never pays for it
 	[[ nodiscard ]] uint16_t analyze () const;
+
+	// How far loading moved a framed picture's screen to the standard window, 0 when centered
+	[[ nodiscard ]] juce::Point<int> getScreenShift () const	{	return screenShift;	}
 
 	// C64 image size (without borders)
 	static constexpr auto	innerUnscaledWidth = 320;
@@ -222,6 +225,7 @@ private:
 
 	int		numFields = 1;
 	int		curField = 0;
+	juce::Point<int>	screenShift;
 
 	// A picture larger than the screen window, as palette indices
 	void clearCanvas ();
@@ -229,8 +233,10 @@ private:
 	int		canvasWidth = 0;
 	int		canvasHeight = 0;
 
-	// A picture exactly screen-wide opens the side borders (sprites there), the top and bottom stay closed
+	// A picture exactly screen-wide opens the side borders (sprites there), the top and bottom stay closed;
+	// exactly screen-high the other way round
 	[[ nodiscard ]] int canvasWindowWidth () const	{	return canvasWidth == outerUnscaledWidth ? outerUnscaledWidth : innerUnscaledWidth;	}
+	[[ nodiscard ]] int canvasWindowHeight () const	{	return canvasHeight == outerUnscaledHeight ? outerUnscaledHeight : innerUnscaledHeight;	}
 	int		scrollX = 0;
 	int		scrollY = 0;
 

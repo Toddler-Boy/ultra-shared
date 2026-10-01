@@ -102,6 +102,42 @@ namespace
 		return std::clamp ( borderX, low, high );
 	}
 
+	// Multicolor pixel pairs start on even screen columns: pairs on odd ones put the screen a
+	// pixel off, towards the side whose outer column is plain border
+	int alignPixelPairs ( const pictureanalyzer::picture& pic, const int left, const int top )
+	{
+		auto	at = pic;
+		at.pixels = pic.frame + size_t ( top ) * size_t ( pic.stride ) + size_t ( left );
+
+		const auto	badEven = countBadPairs ( at, 0 );
+		const auto	badOdd = countBadPairs ( at, 1 );
+
+		if ( badOdd >= badEven || std::min ( badEven, badOdd ) * 100 >= pic.width / 2 * pic.height )
+			return left;
+
+		auto plainColumn = [ & ] ( const int x, const int edge )
+		{
+			for ( auto y = top; y < top + pic.height; ++y )
+			{
+				const auto*	row = pic.frame + size_t ( y ) * size_t ( pic.stride );
+				if ( row[ x ] != row[ edge ] )
+					return false;
+			}
+			return true;
+		};
+
+		const auto	canRight = left + 1 <= pic.stride - pic.width;
+		const auto	canLeft = left >= 1;
+
+		if ( canRight && plainColumn ( left, 0 ) )
+			return left + 1;
+
+		if ( canLeft && plainColumn ( left + pic.width - 1, pic.stride - 1 ) )
+			return left - 1;
+
+		return canRight ? left + 1 : left - 1;
+	}
+
 	// The caller's screen position has equal borders above and below
 	int frameHeightOf ( const pictureanalyzer::picture& pic )
 	{
@@ -201,7 +237,7 @@ pictureanalyzer::position pictureanalyzer::screenPosition ( const picture& pic )
 {
 	const auto	top = screenTop ( pic, frameHeightOf ( pic ) );
 
-	return { screenLeft ( pic, top ), top };
+	return { alignPixelPairs ( pic, screenLeft ( pic, top ), top ), top };
 }
 //-----------------------------------------------------------------------------
 
