@@ -57,6 +57,7 @@ namespace
 	// User CRT content merges in here: a folder in user/Overlays shadows the
 	// factory overlay of the same name whole, a png in user/CRT Masks shadows
 	// (or adds) a single mask
+   #if JUCE_MODULE_AVAILABLE_lime_ShaderToyComponent
 	void installLimeContentLoader ( const juce::File& dataFolder )
 	{
 		auto relative = [ dataFolder ] ( const juce::File& file ) -> juce::String
@@ -189,6 +190,7 @@ namespace
 
 		lime::content::setLoader ( std::move ( loader ) );
 	}
+   #endif
 	//-----------------------------------------------------------------------------
 
 	[[ nodiscard, maybe_unused ]] State fromFolder ( const juce::File& folder )
@@ -243,7 +245,9 @@ namespace
 
 			// Every mode: user CRT content is user data, it merges over the
 			// factory set no matter where that comes from
+		   #if JUCE_MODULE_AVAILABLE_lime_ShaderToyComponent
 			installLimeContentLoader ( st.folder );
+		   #endif
 
 			return st;
 		} ();

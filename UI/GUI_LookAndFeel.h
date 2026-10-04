@@ -146,7 +146,6 @@ public:
 	//
 	// Drawing helpers
 	//
-	static void drawRasterBars ( juce::Graphics& g, juce::Rectangle<float> b );
 	static void drawOutlinedRect ( juce::Graphics& g, const juce::Rectangle<float>& rect, const float radius, const float outline, const juce::Colour outlineCol );
 
 	// Rounded outline kept fully inside rect (radius describes rect itself, the

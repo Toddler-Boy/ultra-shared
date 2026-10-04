@@ -2,14 +2,10 @@
 
 #include "UI/ui-colors.h"
 
-#include "std_lime/lime_math.h"
-
 #include "ultra-shared/Config/DataSource.h"
 #include "ultra-shared/Resources/Icons.h"
 #include "ultra-shared/UI/Components/GUI_Toggle.h"
 #include "ultra-shared/UI/UI_Helpers.h"
-#include "ultra-shared/Video/colodore.h"
-#include "ultra-shared/Video/VIC2_Render.h"
 
 //-------------------------------------------------------------------------------------------------
 
@@ -1198,35 +1194,6 @@ void GUI_LookAndFeel::drawLinearSlider ( juce::Graphics& g, int x, int y, int wi
 			}
 		}
 	}
-}
-//-------------------------------------------------------------------------------------------------
-
-void GUI_LookAndFeel::drawRasterBars ( juce::Graphics& g, juce::Rectangle<float> b )
-{
-	static juce::Random	rand;
-	static const colodore	colo;
-	static auto	c64Palette = colo.generateRGB ( 0, colo.generateYUV ( VIC2_Render::settings::colorStandard::PAL, 60.0f, 100.0f, 60.0f ) );
-
-	static auto	colIdx = 0;
-	auto	y = b.getY ();
-	do
-	{
-		auto	h = lime::remap ( rand.nextFloat (), 0.0f, 1.0f, 5.0f, 20.0f );
-		if ( rand.nextFloat () < 0.05f )
-			h *= 1.5f;
-
-		g.setColour ( juce::Colour ( c64Palette[ colIdx ] ) );
-		g.fillRect ( b.withY ( y ).withHeight ( h ) );
-
-		// Do a break somewhere
-		const auto	w = rand.nextFloat () * b.getWidth ();
-		g.fillRect ( b.withY ( y ).withHeight ( 2.0f ).translated ( w, -1.5f ).withWidth ( b.getWidth () - w ) );
-
-		y += h;
-
-		colIdx = ( colIdx + 1 ) & 15;
-
-	} while ( y < b.getBottom () );
 }
 //-------------------------------------------------------------------------------------------------
 

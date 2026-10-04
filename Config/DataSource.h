@@ -12,7 +12,8 @@
 // consumers only ever see data-relative paths either way.
 //
 // The lime shader stack reads its CRT data through lime::content, installed
-// in pak mode to route the nominal files under getCRTRoot () into the pak.
+// in pak mode to route the nominal files under getCRTRoot () into the pak;
+// only in apps that link lime_ShaderToyComponent.
 
 namespace datasource
 {
