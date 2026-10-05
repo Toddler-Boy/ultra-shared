@@ -213,6 +213,10 @@ namespace
 			// Debug/Development: the repo Data folder, baked in at compile time
 			// so the exe runs from anywhere. Never a pak
 			return fromFolder ( juce::File ( ULTRA_DATA_DIR ) );
+		#elif defined ( ULTRA_DATA_BESIDE_EXE )
+			// Apps that run from a share: one Data folder next to the exe,
+			// both trees merged into it
+			return fromFolder ( juce::File::getSpecialLocation ( juce::File::currentExecutableFile ).getSiblingFile ( "Data" ) );
 		#elif JUCE_MAC
 			// Everything ships inside the bundle: files can't go missing without
 			// breaking the code signature, which stops the app from launching at

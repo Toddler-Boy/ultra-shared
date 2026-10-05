@@ -9,7 +9,8 @@
 // read the repo Data folder baked in as ULTRA_DATA_DIR, with the ultra-shared
 // submodule's own Data tree (ULTRA_SHARED_DATA_DIR) as fallback root for the
 // shared UI data; the app tree wins a name clash. The pak packs both trees, so
-// consumers only ever see data-relative paths either way.
+// consumers only ever see data-relative paths either way. ULTRA_DATA_BESIDE_EXE
+// replaces the pak with a naked Data folder next to the exe holding both trees.
 //
 // The lime shader stack reads its CRT data through lime::content, installed
 // in pak mode to route the nominal files under getCRTRoot () into the pak;
