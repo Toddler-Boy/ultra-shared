@@ -14,6 +14,9 @@ class GUI_SolidButton final : public juce::Button
 public:
 	GUI_SolidButton ( const juce::String& buttonName, const juce::String& stringsKey );
 
+	// Fills the "{}" in the string ("Update all ({})")
+	void setArgument ( const juce::String& text )	{	argument = text;	repaint ();	}
+
 	// juce::Button
 	void paintButton ( juce::Graphics& g, bool isHover, bool isDown ) override;
 
@@ -23,6 +26,7 @@ public:
 
 private:
 	juce::String	textKey;
+	juce::String	argument;
 
 	juce::SharedResourcePointer<Strings>	strings;
 

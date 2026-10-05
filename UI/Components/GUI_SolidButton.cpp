@@ -30,6 +30,6 @@ void GUI_SolidButton::paintButton ( juce::Graphics& g, bool isHover, bool isDown
 
 	g.setColour ( findColour ( UI::colors::window ) );
 	g.setFont ( UI::fontSized ( b.getHeight () * 0.45f, 600 ) );
-	g.drawText ( strings->get ( textKey ), b, juce::Justification::centred );
+	g.drawText ( strings->get ( textKey ).replace ( "{}", argument ), b, juce::Justification::centred );
 }
 //-----------------------------------------------------------------------------
