@@ -1118,7 +1118,7 @@ void GUI_LookAndFeel::drawLinearSlider ( juce::Graphics& g, int x, int y, int wi
 			g.setFont ( UI::font ( UI::fonts::crt_slider_choice ) );
 
 			// Background
-			g.setColour ( UI::getShade ( 0.0f ) );
+			g.setColour ( UI::getShade ( float ( prop.getWithDefault ( "backgroundShade", 0.0f ) ) ) );
 			g.fillRoundedRectangle ( b, b.getHeight () / 2.0f );
 
 			const auto	choiceWidth = b.getWidth () / numChoices;
