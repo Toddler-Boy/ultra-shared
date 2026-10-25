@@ -87,6 +87,10 @@ public:
 	//
 	int getDefaultScrollbarWidth () override;
 	int getMinimumScrollbarThumbSize ( juce::ScrollBar& ) override;
+
+	// The track starts this far into the bar on its content side while the mouse is away: content that ends this far
+	// short of its pad before the bar reads as padded like its other side
+	static constexpr int	scrollbarTrackInset = 9;
 	void drawScrollbar ( juce::Graphics&, juce::ScrollBar&, int x, int y, int width, int height, bool isScrollbarVertical, int thumbStartPosition, int thumbSize, bool isMouseOver, bool isMouseDown ) override;
 
 	//

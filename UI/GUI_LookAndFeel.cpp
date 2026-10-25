@@ -571,11 +571,12 @@ void GUI_LookAndFeel::drawScrollbar ( juce::Graphics& g, juce::ScrollBar& scroll
 	const auto	withThumb = isScrollbarVertical ? ( height != thumbSize ) : ( width != thumbSize );
 	const auto	showFull = ( isMouseOver || isMouseDown ) && withThumb;
 
-	const auto	reducedBackX = showFull ? 0.0f : 3.0f;
+	constexpr auto	paddingTopOrLeft = 6;
+
+	const auto	reducedBackX = showFull ? 0.0f : float ( scrollbarTrackInset - paddingTopOrLeft );
 	const auto	reducedThumbX = showFull ? 3.0f : 5.5f;
 	constexpr auto	reducedThumbY = 3.0f;
 
-	constexpr auto	paddingTopOrLeft = 6;
 	if ( isScrollbarVertical )
 	{
 		x += paddingTopOrLeft;
