@@ -1138,6 +1138,32 @@ void GUI_LookAndFeel::drawLinearSlider ( juce::Graphics& g, int x, int y, int wi
 				g.drawText ( prop[ "choice" + juce::String ( i ) ], r, juce::Justification::centred, false );
 			}
 		}
+		else if ( prop.contains ( "gradient" ) )
+		{
+			// The track is the value range itself, "gradient" its colours left to right as strings; the thumb marks the value
+			constexpr auto	trackHeight = 8.0f;
+
+			const auto*	stops = prop[ "gradient" ].getArray ();
+			const auto	track = juce::Rectangle<float> ( float ( x ), y + ( height - trackHeight ) * 0.5f, float ( width ), trackHeight );
+
+			if ( stops != nullptr && stops->size () >= 2 )
+			{
+				juce::ColourGradient	gradient ( juce::Colour::fromString ( stops->getFirst ().toString () ), track.getX (), track.getCentreY (),
+												   juce::Colour::fromString ( stops->getLast ().toString () ), track.getRight (), track.getCentreY (), false );
+
+				for ( int i = 1; i < stops->size () - 1; ++i )
+					gradient.addColour ( double ( i ) / ( stops->size () - 1 ), juce::Colour::fromString ( stops->getUnchecked ( i ).toString () ) );
+
+				g.setGradientFill ( gradient );
+			}
+			else
+				g.setColour ( UI::getShade ( 0.3f ) );
+
+			g.fillRoundedRectangle ( track, trackHeight / 2.0f );
+
+			g.setColour ( hover ? findColour ( UI::colors::accent ) : findColour ( UI::colors::text ) );
+			g.fillRoundedRectangle ( juce::Rectangle<float> ( 3.0f, float ( getSliderThumbRadius ( slider ) ) ).withCentre ( { sliderPos, track.getCentreY () } ), 1.5f );
+		}
 		else
 		{
 			constexpr auto	trackHeight = 4.0f;
