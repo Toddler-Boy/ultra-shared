@@ -145,7 +145,7 @@ void GUI_AudioDeviceSelector::updateConfig ( bool updateOutputDevice, bool updat
 		messageBox = juce::AlertWindow::showScopedAsync ( juce::MessageBoxOptions ().withIconType ( juce::MessageBoxIconType::WarningIcon )
 																	  .withTitle ( "Error when trying to open audio device!" )
 																	  .withMessage ( error )
-																	  .withButton ( "OK" ),
+																	  .withButton ( "OK", 0 ),
 												   nullptr );
 }
 //-----------------------------------------------------------------------------

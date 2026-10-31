@@ -79,6 +79,7 @@ private:
 	GUI_ViewportSmoothScroll	smoothScroll { settingsViewport };
 
 	GUI_PresetSaveDialog	presetSaveDialog;
+	juce::ScopedMessageBox	presetReplaceBox;
 
 	std::unordered_map<juce::String, juce::Component*>	settingsComponentMap;
 

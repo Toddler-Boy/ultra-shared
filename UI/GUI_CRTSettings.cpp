@@ -844,12 +844,12 @@ void GUI_CRTSettings::savePresetNamed ( const juce::String& name )
 								.withIconType ( juce::MessageBoxIconType::QuestionIcon )
 								.withTitle ( strings->get ( "crt/settings/crt/preset-replace-title" ) )
 								.withMessage ( strings->get ( "crt/settings/crt/preset-replace" ).replace ( "{}", legal ) )
-								.withButton ( strings->get ( "crt/settings/crt/preset-save-action" ) )
-								.withButton ( strings->get ( "crt/settings/crt/preset-cancel" ) )
+								.withButton ( strings->get ( "crt/settings/crt/preset-save-action" ), 0 )
+								.withButton ( juce::MessageBoxButtonOptions ( strings->get ( "crt/settings/crt/preset-cancel" ), 1 ).withRole ( juce::MessageBoxButtonRole::cancel ) )
 								.withAssociatedComponent ( this );
 
-		// 0 = the first button; the dialog stays up behind a declined overwrite
-		juce::NativeMessageBox::showAsync ( options, [ commit ] ( const int result )
+		// The save dialog stays up behind a declined overwrite
+		presetReplaceBox = juce::NativeMessageBox::showScopedAsync ( options, [ commit ] ( const int result )
 		{
 			if ( result == 0 )
 				commit ();
