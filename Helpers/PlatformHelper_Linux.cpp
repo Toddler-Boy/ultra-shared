@@ -11,11 +11,6 @@ void setWindowProperties ( void*, unsigned int )
 }
 //-----------------------------------------------------------------------------
 
-void setWindowOwner ( void*, void* )
-{
-}
-//-----------------------------------------------------------------------------
-
 int64_t availableMemoryBytes ()
 {
 	// MemAvailable counts reclaimable cache, MemFree does not
