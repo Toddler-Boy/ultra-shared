@@ -1241,3 +1241,93 @@ void GUI_LookAndFeel::drawOutline ( juce::Graphics& g, const juce::Rectangle<flo
 	g.drawRoundedRectangle ( rect.reduced ( lineWidth / 2.0f ), radius - lineWidth / 2.0f, lineWidth );
 }
 //-------------------------------------------------------------------------------------------------
+
+std::vector<juce::Colour> GUI_LookAndFeel::oklchPalette ( juce::Colour startColor, juce::Colour endColor, const int numSteps )
+{
+	constexpr auto	PI = juce::MathConstants<float>::pi;
+
+	// Below this chroma the hue is noise
+	constexpr auto	grayChroma = 0.02f;
+
+	std::vector<juce::Colour> palette;
+	palette.reserve ( size_t ( std::max ( numSteps, 0 ) ) );
+
+	// --- Helper: sRGB to Linear and Linear to sRGB ---
+	auto toLinear = [] ( float c ) { return c <= 0.04045f ? c / 12.92f : std::pow ( ( c + 0.055f ) / 1.055f, 2.4f ); };
+	auto fromLinear = [] ( float c ) { return c <= 0.0031308f ? 12.92f * c : 1.055f * std::pow ( c, 1.0f / 2.4f ) - 0.055f; };
+
+	// --- Conversion: RGB to OkLch ---
+	auto rgbToOkLch = [ & ] ( juce::Colour c ) {
+		float r = toLinear ( c.getFloatRed () ), g = toLinear ( c.getFloatGreen () ), b = toLinear ( c.getFloatBlue () );
+		float l = 0.4122214708f * r + 0.5363325363f * g + 0.0514459929f * b;
+		float m = 0.2119034982f * r + 0.6806995451f * g + 0.1073969566f * b;
+		float s = 0.0883024619f * r + 0.2817188376f * g + 0.6299787005f * b;
+		float l_ = std::cbrt ( l ), m_ = std::cbrt ( m ), s_ = std::cbrt ( s );
+		float L = 0.2104542553f * l_ + 0.7936177850f * m_ - 0.0040720468f * s_;
+		float a = 1.9779984951f * l_ - 2.4285922050f * m_ + 0.4505937099f * s_;
+		float b_ = 0.0259040371f * l_ + 0.7827717662f * m_ - 0.8086757660f * s_;
+		return std::array<float, 4> { L, std::sqrt ( a * a + b_ * b_ ), std::atan2 ( b_, a ), c.getFloatAlpha () };
+	};
+
+	// --- Lambda: OkLch back to RGB ---
+	auto oklchToRgb = [ & ] ( float L, float C, float h, float alpha ) {
+		float a_comp = C * std::cos ( h ), b_comp = C * std::sin ( h );
+		float l_ = L + 0.3963377774f * a_comp + 0.2158037573f * b_comp;
+		float m_ = L - 0.1055613458f * a_comp - 0.0638541728f * b_comp;
+		float s_ = L - 0.0894841775f * a_comp - 1.2914855480f * b_comp;
+		float l = l_ * l_ * l_, m = m_ * m_ * m_, s = s_ * s_ * s_;
+		float r = fromLinear ( +4.0767416621f * l - 3.3077115913f * m + 0.2309699292f * s );
+		float g = fromLinear ( -1.2684380046f * l + 2.6097574011f * m - 0.3413193965f * s );
+		float b = fromLinear ( -0.0041960863f * l - 0.7034186147f * m + 1.7076147010f * s );
+		return juce::Colour::fromFloatRGBA ( std::clamp ( r, 0.0f, 1.0f ), std::clamp ( g, 0.0f, 1.0f ), std::clamp ( b, 0.0f, 1.0f ), alpha );
+	};
+
+	auto	lch1 = rgbToOkLch ( startColor );
+	auto	lch2 = rgbToOkLch ( endColor );
+
+	if ( lch1[ 1 ] < grayChroma )
+		lch1[ 2 ] = lch2[ 2 ];
+	else if ( lch2[ 1 ] < grayChroma )
+		lch2[ 2 ] = lch1[ 2 ];
+
+	auto	h1 = lch1[ 2 ];
+	auto	h2 = lch2[ 2 ];
+	auto	diff = h2 - h1;
+
+	if ( diff > PI )       h1 += 2.0f * PI;
+	else if ( diff < -PI ) h2 += 2.0f * PI;
+
+	for ( auto i = 0; i < numSteps; ++i )
+	{
+		auto	t = numSteps > 1 ? i / (float)( numSteps - 1 ) : 0.0f;
+
+		palette.push_back ( oklchToRgb (
+			lch1[ 0 ] + t * ( lch2[ 0 ] - lch1[ 0 ] ), // L
+			lch1[ 1 ] + t * ( lch2[ 1 ] - lch1[ 1 ] ), // C
+			h1 + t * ( h2 - h1 ),                // h
+			lch1[ 3 ] + t * ( lch2[ 3 ] - lch1[ 3 ] )  // alpha
+		) );
+	}
+
+	return palette;
+}
+//-------------------------------------------------------------------------------------------------
+
+juce::ColourGradient GUI_LookAndFeel::withOklchStops ( const juce::ColourGradient& gradient, const int stepsPerSegment )
+{
+	auto	bridged = gradient;
+
+	for ( auto i = 0; i < gradient.getNumColours () - 1; ++i )
+	{
+		const auto	p1 = gradient.getColourPosition ( i );
+		const auto	p2 = gradient.getColourPosition ( i + 1 );
+
+		const auto	pal = oklchPalette ( gradient.getColour ( i ), gradient.getColour ( i + 1 ), stepsPerSegment + 2 );
+
+		for ( auto step = 1; step <= stepsPerSegment; ++step )
+			bridged.addColour ( p1 + ( p2 - p1 ) * double ( step ) / double ( stepsPerSegment + 1 ), pal[ size_t ( step ) ] );
+	}
+
+	return bridged;
+}
+//-------------------------------------------------------------------------------------------------

@@ -156,6 +156,15 @@ public:
 	// inset is derived). Hidden widths (theme value 0) skip the draw entirely
 	static void drawOutline ( juce::Graphics& g, const juce::Rectangle<float>& rect, const float radius, const float lineWidth );
 
+	// OkLch-interpolated colors from start to end (both included), staying
+	// saturated instead of dipping through sRGB gray. A gray end (white, gray,
+	// black) takes the other end's hue; alpha blends linearly
+	[[ nodiscard ]] static std::vector<juce::Colour> oklchPalette ( juce::Colour startColor, juce::Colour endColor, int numSteps );
+
+	// The gradient with every pair of neighboring stops bridged by OkLch
+	// in-between colors
+	[[ nodiscard ]] static juce::ColourGradient withOklchStops ( const juce::ColourGradient& gradient, int stepsPerSegment = 8 );
+
 private:
 	// On-demand per-weight clones of the variable fonts, cached for the app's
 	// lifetime. The weight is the true "wght" axis value (Figtree covers
