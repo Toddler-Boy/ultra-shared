@@ -33,6 +33,9 @@ namespace UI
 	[[ nodiscard ]] float easeInOutQuad ( float t );
 	[[ nodiscard ]] juce::Colour getColorWithPerceivedBrightness ( const juce::Colour col, const float perceivedBrightness ) noexcept;
 
+	// gin's box shadows ("boxShadow" in the layouts) drawn with melatonin_blur; once at app start
+	void installShadowRenderer ();
+
 	// Point size = the em size, comparable 1:1 with a CSS px value. For
 	// deliberate one-offs and role derivations - themed text uses font ( role )
 	[[ nodiscard ]] juce::Font fontSized ( const float points, const int weight = 500 );

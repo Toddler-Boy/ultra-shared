@@ -2,8 +2,6 @@
 
 #include <JuceHeader.h>
 
-#include "ultra-shared/Helpers/MipMap.h"
-
 #include "ultra-shared/UI/Components/GUI_Label.h"
 #include "ultra-shared/UI/Components/GUI_ScrollTextViewer.h"
 #include "ultra-shared/UI/GUI_ModalPanel.h"
@@ -20,7 +18,7 @@ public:
 		mipMap.draw ( g, getLocalBounds ().toFloat () );
 	}
 
-	MipMap	mipMap;
+	gin::MipMap	mipMap;
 
 private:
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR ( GUI_MipMap )

@@ -4,8 +4,6 @@
 
 #include "ultra-shared/UI/UI_Helpers.h"
 
-class MipMap;
-
 // The shared look of both apps; an app derives when it draws things of its
 // own (ultraSID adds the player progress pieces)
 class GUI_LookAndFeel : public juce::LookAndFeel_V4, public juce::MouseListener
@@ -164,6 +162,14 @@ public:
 	// The gradient with every pair of neighboring stops bridged by OkLch
 	// in-between colors
 	[[ nodiscard ]] static juce::ColourGradient withOklchStops ( const juce::ColourGradient& gradient, int stepsPerSegment = 8 );
+
+	// OkLab-interpolated colors from start to end (both included), chroma blended
+	// linearly along the mixed direction: no hue arc, only colors between the two ends
+	[[ nodiscard ]] static std::vector<juce::Colour> oklabPalette ( juce::Colour startColor, juce::Colour endColor, int numSteps );
+
+	// The gradient with every pair of neighboring stops bridged by OkLab
+	// in-between colors
+	[[ nodiscard ]] static juce::ColourGradient withOklabStops ( const juce::ColourGradient& gradient, int stepsPerSegment = 3 );
 
 private:
 	// On-demand per-weight clones of the variable fonts, cached for the app's

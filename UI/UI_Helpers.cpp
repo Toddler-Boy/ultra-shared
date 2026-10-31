@@ -95,6 +95,34 @@ float UI::easeInOutQuad ( float t )
 }
 //-----------------------------------------------------------------------------
 
+// One melatonin shadow per outline size and blur: it keeps its blurred image while the outline only moves and
+// changes colour or opacity, so moving and fading shadows never blur again
+void UI::installShadowRenderer ()
+{
+	gin::BoxShadow::setRenderer ( [] ( juce::Graphics& g, const juce::Path& outline, const gin::ShadowSpec& s )
+	{
+		// Message thread only, like painting
+		static std::map<juce::String, melatonin::DropShadow>	cache;
+
+		const auto	b = outline.getBounds ();
+		const auto	key = juce::String ( juce::roundToInt ( b.getWidth () * 4.0f ) ) + "x" + juce::String ( juce::roundToInt ( b.getHeight () * 4.0f ) )
+						  + "/" + juce::String ( s.blur, 2 ) + "/" + juce::String ( s.spread, 2 );
+
+		// Enough for every shadow on screen; a full cache starts over rather than growing with every animation step
+		if ( cache.size () > 256 && ! cache.contains ( key ) )
+			cache.clear ();
+
+		auto	itr = cache.find ( key );
+
+		if ( itr == cache.end () )
+			itr = cache.try_emplace ( key, s.colour, s.blur, s.offset, s.spread ).first;
+
+		itr->second.setColor ( s.colour ).setOffset ( s.offset );
+		itr->second.render ( g, outline );
+	} );
+}
+//-----------------------------------------------------------------------------
+
 juce::Colour UI::getColorWithPerceivedBrightness ( juce::Colour input, const float targetL ) noexcept
 {
 	auto	low = 0.0f;

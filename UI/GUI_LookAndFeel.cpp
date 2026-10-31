@@ -1242,6 +1242,96 @@ void GUI_LookAndFeel::drawOutline ( juce::Graphics& g, const juce::Rectangle<flo
 }
 //-------------------------------------------------------------------------------------------------
 
+static float toLinearSrgb ( const float c )
+{
+	return c <= 0.04045f ? c / 12.92f : std::pow ( ( c + 0.055f ) / 1.055f, 2.4f );
+}
+
+static float fromLinearSrgb ( const float c )
+{
+	return c <= 0.0031308f ? 12.92f * c : 1.055f * std::pow ( c, 1.0f / 2.4f ) - 0.055f;
+}
+
+// { L, a, b, alpha }
+static std::array<float, 4> toOklab ( const juce::Colour c )
+{
+	const auto	r = toLinearSrgb ( c.getFloatRed () ), g = toLinearSrgb ( c.getFloatGreen () ), b = toLinearSrgb ( c.getFloatBlue () );
+	const auto	l = std::cbrt ( 0.4122214708f * r + 0.5363325363f * g + 0.0514459929f * b );
+	const auto	m = std::cbrt ( 0.2119034982f * r + 0.6806995451f * g + 0.1073969566f * b );
+	const auto	s = std::cbrt ( 0.0883024619f * r + 0.2817188376f * g + 0.6299787005f * b );
+
+	return { 0.2104542553f * l + 0.7936177850f * m - 0.0040720468f * s,
+			 1.9779984951f * l - 2.4285922050f * m + 0.4505937099f * s,
+			 0.0259040371f * l + 0.7827717662f * m - 0.8086757660f * s,
+			 c.getFloatAlpha () };
+}
+
+static std::array<float, 3> oklabToLinearSrgb ( const float L, const float a, const float b )
+{
+	const auto	l_ = L + 0.3963377774f * a + 0.2158037573f * b;
+	const auto	m_ = L - 0.1055613458f * a - 0.0638541728f * b;
+	const auto	s_ = L - 0.0894841775f * a - 1.2914855480f * b;
+	const auto	l = l_ * l_ * l_, m = m_ * m_ * m_, s = s_ * s_ * s_;
+
+	return { +4.0767416621f * l - 3.3077115913f * m + 0.2309699292f * s,
+			 -1.2684380046f * l + 2.6097574011f * m - 0.3413193965f * s,
+			 -0.0041960863f * l - 0.7034186147f * m + 1.7076147010f * s };
+}
+
+static bool inSrgbGamut ( const std::array<float, 3>& rgb )
+{
+	constexpr auto	epsilon = 0.0001f;
+	return std::ranges::all_of ( rgb, [] ( const float c ) { return c >= -epsilon && c <= 1.0f + epsilon; } );
+}
+
+// CSS Color 4 gamut mapping: out-of-gamut colours lose chroma at constant L and hue until they fit
+static juce::Colour fromOklab ( const float L, const float a, const float b, const float alpha )
+{
+	auto	rgb = oklabToLinearSrgb ( L, a, b );
+
+	if ( ! inSrgbGamut ( rgb ) )
+	{
+		auto	low = 0.0f;
+		auto	high = 1.0f;
+
+		for ( auto i = 0; i < 10; ++i )
+		{
+			const auto	mid = ( low + high ) / 2.0f;
+			if ( inSrgbGamut ( oklabToLinearSrgb ( L, a * mid, b * mid ) ) )
+				low = mid;
+			else
+				high = mid;
+		}
+
+		rgb = oklabToLinearSrgb ( L, a * low, b * low );
+	}
+
+	return juce::Colour::fromFloatRGBA ( fromLinearSrgb ( std::clamp ( rgb[ 0 ], 0.0f, 1.0f ) ),
+										 fromLinearSrgb ( std::clamp ( rgb[ 1 ], 0.0f, 1.0f ) ),
+										 fromLinearSrgb ( std::clamp ( rgb[ 2 ], 0.0f, 1.0f ) ),
+										 alpha );
+}
+
+static juce::ColourGradient withPaletteStops ( const juce::ColourGradient& gradient, const int stepsPerSegment,
+											   std::vector<juce::Colour> ( *palette ) ( juce::Colour, juce::Colour, int ) )
+{
+	auto	bridged = gradient;
+
+	for ( auto i = 0; i < gradient.getNumColours () - 1; ++i )
+	{
+		const auto	p1 = gradient.getColourPosition ( i );
+		const auto	p2 = gradient.getColourPosition ( i + 1 );
+
+		const auto	pal = palette ( gradient.getColour ( i ), gradient.getColour ( i + 1 ), stepsPerSegment + 2 );
+
+		for ( auto step = 1; step <= stepsPerSegment; ++step )
+			bridged.addColour ( p1 + ( p2 - p1 ) * double ( step ) / double ( stepsPerSegment + 1 ), pal[ size_t ( step ) ] );
+	}
+
+	return bridged;
+}
+//-------------------------------------------------------------------------------------------------
+
 std::vector<juce::Colour> GUI_LookAndFeel::oklchPalette ( juce::Colour startColor, juce::Colour endColor, const int numSteps )
 {
 	constexpr auto	PI = juce::MathConstants<float>::pi;
@@ -1252,34 +1342,13 @@ std::vector<juce::Colour> GUI_LookAndFeel::oklchPalette ( juce::Colour startColo
 	std::vector<juce::Colour> palette;
 	palette.reserve ( size_t ( std::max ( numSteps, 0 ) ) );
 
-	// --- Helper: sRGB to Linear and Linear to sRGB ---
-	auto toLinear = [] ( float c ) { return c <= 0.04045f ? c / 12.92f : std::pow ( ( c + 0.055f ) / 1.055f, 2.4f ); };
-	auto fromLinear = [] ( float c ) { return c <= 0.0031308f ? 12.92f * c : 1.055f * std::pow ( c, 1.0f / 2.4f ) - 0.055f; };
-
-	// --- Conversion: RGB to OkLch ---
-	auto rgbToOkLch = [ & ] ( juce::Colour c ) {
-		float r = toLinear ( c.getFloatRed () ), g = toLinear ( c.getFloatGreen () ), b = toLinear ( c.getFloatBlue () );
-		float l = 0.4122214708f * r + 0.5363325363f * g + 0.0514459929f * b;
-		float m = 0.2119034982f * r + 0.6806995451f * g + 0.1073969566f * b;
-		float s = 0.0883024619f * r + 0.2817188376f * g + 0.6299787005f * b;
-		float l_ = std::cbrt ( l ), m_ = std::cbrt ( m ), s_ = std::cbrt ( s );
-		float L = 0.2104542553f * l_ + 0.7936177850f * m_ - 0.0040720468f * s_;
-		float a = 1.9779984951f * l_ - 2.4285922050f * m_ + 0.4505937099f * s_;
-		float b_ = 0.0259040371f * l_ + 0.7827717662f * m_ - 0.8086757660f * s_;
-		return std::array<float, 4> { L, std::sqrt ( a * a + b_ * b_ ), std::atan2 ( b_, a ), c.getFloatAlpha () };
+	auto rgbToOkLch = [] ( juce::Colour c ) {
+		const auto	lab = toOklab ( c );
+		return std::array<float, 4> { lab[ 0 ], std::hypot ( lab[ 1 ], lab[ 2 ] ), std::atan2 ( lab[ 2 ], lab[ 1 ] ), lab[ 3 ] };
 	};
 
-	// --- Lambda: OkLch back to RGB ---
-	auto oklchToRgb = [ & ] ( float L, float C, float h, float alpha ) {
-		float a_comp = C * std::cos ( h ), b_comp = C * std::sin ( h );
-		float l_ = L + 0.3963377774f * a_comp + 0.2158037573f * b_comp;
-		float m_ = L - 0.1055613458f * a_comp - 0.0638541728f * b_comp;
-		float s_ = L - 0.0894841775f * a_comp - 1.2914855480f * b_comp;
-		float l = l_ * l_ * l_, m = m_ * m_ * m_, s = s_ * s_ * s_;
-		float r = fromLinear ( +4.0767416621f * l - 3.3077115913f * m + 0.2309699292f * s );
-		float g = fromLinear ( -1.2684380046f * l + 2.6097574011f * m - 0.3413193965f * s );
-		float b = fromLinear ( -0.0041960863f * l - 0.7034186147f * m + 1.7076147010f * s );
-		return juce::Colour::fromFloatRGBA ( std::clamp ( r, 0.0f, 1.0f ), std::clamp ( g, 0.0f, 1.0f ), std::clamp ( b, 0.0f, 1.0f ), alpha );
+	auto oklchToRgb = [] ( float L, float C, float h, float alpha ) {
+		return fromOklab ( L, C * std::cos ( h ), C * std::sin ( h ), alpha );
 	};
 
 	auto	lch1 = rgbToOkLch ( startColor );
@@ -1315,19 +1384,40 @@ std::vector<juce::Colour> GUI_LookAndFeel::oklchPalette ( juce::Colour startColo
 
 juce::ColourGradient GUI_LookAndFeel::withOklchStops ( const juce::ColourGradient& gradient, const int stepsPerSegment )
 {
-	auto	bridged = gradient;
+	return withPaletteStops ( gradient, stepsPerSegment, &GUI_LookAndFeel::oklchPalette );
+}
+//-------------------------------------------------------------------------------------------------
 
-	for ( auto i = 0; i < gradient.getNumColours () - 1; ++i )
+std::vector<juce::Colour> GUI_LookAndFeel::oklabPalette ( juce::Colour startColor, juce::Colour endColor, const int numSteps )
+{
+	// Bounds the chroma restore, so near exactly opposite ends the chroma fades to zero instead of flipping hue
+	constexpr auto	maxBoost = 4.0f;
+
+	std::vector<juce::Colour> palette;
+	palette.reserve ( size_t ( std::max ( numSteps, 0 ) ) );
+
+	const auto	lab1 = toOklab ( startColor );
+	const auto	lab2 = toOklab ( endColor );
+	const auto	c1 = std::hypot ( lab1[ 1 ], lab1[ 2 ] );
+	const auto	c2 = std::hypot ( lab2[ 1 ], lab2[ 2 ] );
+
+	for ( auto i = 0; i < numSteps; ++i )
 	{
-		const auto	p1 = gradient.getColourPosition ( i );
-		const auto	p2 = gradient.getColourPosition ( i + 1 );
+		const auto	t = numSteps > 1 ? float ( i ) / float ( numSteps - 1 ) : 0.0f;
+		const auto	a = lab1[ 1 ] + t * ( lab2[ 1 ] - lab1[ 1 ] );
+		const auto	b = lab1[ 2 ] + t * ( lab2[ 2 ] - lab1[ 2 ] );
+		const auto	length = std::hypot ( a, b );
+		const auto	scale = length > 1e-6f ? std::min ( ( c1 + t * ( c2 - c1 ) ) / length, maxBoost ) : 0.0f;
 
-		const auto	pal = oklchPalette ( gradient.getColour ( i ), gradient.getColour ( i + 1 ), stepsPerSegment + 2 );
-
-		for ( auto step = 1; step <= stepsPerSegment; ++step )
-			bridged.addColour ( p1 + ( p2 - p1 ) * double ( step ) / double ( stepsPerSegment + 1 ), pal[ size_t ( step ) ] );
+		palette.push_back ( fromOklab ( lab1[ 0 ] + t * ( lab2[ 0 ] - lab1[ 0 ] ), a * scale, b * scale, lab1[ 3 ] + t * ( lab2[ 3 ] - lab1[ 3 ] ) ) );
 	}
 
-	return bridged;
+	return palette;
+}
+//-------------------------------------------------------------------------------------------------
+
+juce::ColourGradient GUI_LookAndFeel::withOklabStops ( const juce::ColourGradient& gradient, const int stepsPerSegment )
+{
+	return withPaletteStops ( gradient, stepsPerSegment, &GUI_LookAndFeel::oklabPalette );
 }
 //-------------------------------------------------------------------------------------------------
