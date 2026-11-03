@@ -55,8 +55,8 @@ void GUI_XYPad::paint ( juce::Graphics& g )
 
 void GUI_XYPad::mouseEnter ( const juce::MouseEvent& /*evt*/ )
 {
-	hover = true;
-	setMouseCursor ( juce::MouseCursor::PointingHandCursor );
+	hover = isEnabled ();
+	setMouseCursor ( hover ? juce::MouseCursor::PointingHandCursor : juce::MouseCursor::NormalCursor );
 	repaint ();
 }
 //-----------------------------------------------------------------------------

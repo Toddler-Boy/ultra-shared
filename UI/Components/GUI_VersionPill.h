@@ -32,6 +32,7 @@ public:
 
 	// juce::Component
 	void resized () override;
+	juce::MouseCursor getMouseCursor () override	{	return isEnabled () ? juce::MouseCursor::PointingHandCursor : juce::MouseCursor::ParentCursor;	}
 	void lookAndFeelChanged () override;
 	std::unique_ptr<juce::AccessibilityHandler> createAccessibilityHandler () override;
 

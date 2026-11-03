@@ -13,7 +13,7 @@ public:
 	void mouseEnter ( const juce::MouseEvent& evt ) override
 	{
 		juce::Slider::mouseEnter ( evt );
-		setMouseCursor ( juce::MouseCursor::PointingHandCursor );
+		setMouseCursor ( isEnabled () ? juce::MouseCursor::PointingHandCursor : juce::MouseCursor::NormalCursor );
 	}
 
 	void mouseExit ( const juce::MouseEvent& evt ) override

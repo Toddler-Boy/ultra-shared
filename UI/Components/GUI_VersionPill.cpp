@@ -52,7 +52,6 @@ constexpr auto	pulseMS = pulsePeriodMS * pulseCycles;
 GUI_VersionPill::GUI_VersionPill ()
 	: juce::Button ( "version" )
 {
-	setMouseCursor ( juce::MouseCursor::PointingHandCursor );
 }
 //-----------------------------------------------------------------------------
 

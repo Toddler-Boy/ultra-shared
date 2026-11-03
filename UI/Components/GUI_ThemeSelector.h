@@ -20,7 +20,7 @@ public:
 
 	// juce::ComboBox
 	void showPopup () override;
-	juce::MouseCursor getMouseCursor () override	{	return juce::MouseCursor::PointingHandCursor;	}
+	juce::MouseCursor getMouseCursor () override	{	return isEnabled () ? juce::MouseCursor::PointingHandCursor : juce::MouseCursor::ParentCursor;	}
 
 	// this: rebuilds the item list and re-selects the stored theme
 	void restorePreference ();

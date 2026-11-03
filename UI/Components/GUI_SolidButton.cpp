@@ -7,6 +7,15 @@
 
 //-----------------------------------------------------------------------------
 
+namespace
+{
+	[[ nodiscard ]] juce::Font labelFont ( const float height )
+	{
+		return UI::fontSized ( height * 0.45f, 600 );
+	}
+}
+//-----------------------------------------------------------------------------
+
 GUI_SolidButton::GUI_SolidButton ( const juce::String& buttonName, const juce::String& stringsKey )
 	: juce::Button ( buttonName )
 	, textKey ( stringsKey )
@@ -26,10 +35,22 @@ void GUI_SolidButton::paintButton ( juce::Graphics& g, bool isHover, bool isDown
 		bckCol = bckCol.withMultipliedAlpha ( 0.9f );
 
 	g.setColour ( bckCol );
-	g.fillRoundedRectangle ( b, 6.0f );
+	g.fillRoundedRectangle ( b, cornerRole ? UI::corner ( *cornerRole, b ) : 6.0f );
 
 	g.setColour ( findColour ( UI::colors::window ) );
-	g.setFont ( UI::fontSized ( b.getHeight () * 0.45f, 600 ) );
-	g.drawText ( strings->get ( textKey ).replace ( "{}", argument ), b, juce::Justification::centred );
+	g.setFont ( labelFont ( b.getHeight () ) );
+	g.drawText ( label (), b, juce::Justification::centred );
+}
+//-----------------------------------------------------------------------------
+
+int GUI_SolidButton::textWidth ( const float height ) const
+{
+	return int ( std::ceil ( juce::GlyphArrangement::getStringWidth ( labelFont ( height ), label () ) ) );
+}
+//-----------------------------------------------------------------------------
+
+juce::String GUI_SolidButton::label () const
+{
+	return strings->get ( textKey ).replace ( "{}", argument );
 }
 //-----------------------------------------------------------------------------
