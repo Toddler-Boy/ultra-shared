@@ -17,6 +17,9 @@ class GUI_SolidButton final : public juce::Button
 public:
 	GUI_SolidButton ( const juce::String& buttonName, const juce::String& stringsKey );
 
+	// Another string of the strings file as its label
+	void setTextKey ( const juce::String& key )	{	textKey = key;	repaint ();	}
+
 	// Fills the "{}" in the string ("Update all ({})")
 	void setArgument ( const juce::String& text )	{	argument = text;	repaint ();	}
 
