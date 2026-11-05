@@ -37,15 +37,15 @@ void GUI_SolidButton::paintButton ( juce::Graphics& g, bool isHover, bool isDown
 	g.setColour ( bckCol );
 	g.fillRoundedRectangle ( b, cornerRole ? UI::corner ( *cornerRole, b ) : 6.0f );
 
-	g.setColour ( findColour ( UI::colors::window ) );
-	g.setFont ( labelFont ( b.getHeight () ) );
+	g.setColour ( labelColour.value_or ( findColour ( UI::colors::window ) ) );
+	g.setFont ( labelFontOverride.value_or ( labelFont ( b.getHeight () ) ) );
 	g.drawText ( label (), b, juce::Justification::centred );
 }
 //-----------------------------------------------------------------------------
 
 int GUI_SolidButton::textWidth ( const float height ) const
 {
-	return int ( std::ceil ( juce::GlyphArrangement::getStringWidth ( labelFont ( height ), label () ) ) );
+	return int ( std::ceil ( juce::GlyphArrangement::getStringWidth ( labelFontOverride.value_or ( labelFont ( height ) ), label () ) ) );
 }
 //-----------------------------------------------------------------------------
 

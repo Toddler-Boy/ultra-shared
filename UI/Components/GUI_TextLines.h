@@ -40,6 +40,9 @@ public:
 	// One line, cut with an ellipsis where it runs out of width; highlights and the note are left out
 	void setSingleLine ( bool single );
 
+	// Digits of equal width ("tnum"), for numbers that change in place
+	void setTabularDigits ( bool tabular )	{	tabularDigits = tabular;	repaint ();	}
+
 	// juce::Component
 	void paint ( juce::Graphics& g ) override;
 	void resized () override;
@@ -56,6 +59,7 @@ private:
 	juce::String		note;
 	bool				autoHeight = false;
 	bool				singleLine = false;
+	bool				tabularDigits = false;
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR ( GUI_TextLines )
 };

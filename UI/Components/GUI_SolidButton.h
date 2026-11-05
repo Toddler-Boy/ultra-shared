@@ -26,6 +26,12 @@ public:
 	// A themed corner instead of the fixed one (a large radius gives a pill)
 	void setCornerRole ( const UI::corners::Role role )	{	cornerRole = role;	repaint ();	}
 
+	// The label's colour instead of the window colour
+	void setLabelColour ( const juce::Colour colour )	{	labelColour = colour;	repaint ();	}
+
+	// The label's font instead of one sized to the button's height
+	void setLabelFont ( const juce::Font& font )	{	labelFontOverride = font;	repaint ();	}
+
 	// The label's width at this button height, without padding
 	[[ nodiscard ]] int textWidth ( float height ) const;
 
@@ -42,6 +48,8 @@ private:
 	juce::String	textKey;
 	juce::String	argument;
 	std::optional<UI::corners::Role>	cornerRole;
+	std::optional<juce::Colour>			labelColour;
+	std::optional<juce::Font>			labelFontOverride;
 
 	juce::SharedResourcePointer<Strings>	strings;
 

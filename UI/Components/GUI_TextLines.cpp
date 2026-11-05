@@ -88,7 +88,12 @@ juce::Font GUI_TextLines::font () const
 		case Style::error:		break;
 	}
 
-	return bodyFont ();
+	auto	f = bodyFont ();
+
+	if ( tabularDigits )
+		f.setFeatureSetting ( { "tnum", juce::FontFeatureSetting::featureEnabled } );
+
+	return f;
 }
 //-----------------------------------------------------------------------------
 
