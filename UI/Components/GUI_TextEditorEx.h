@@ -10,6 +10,12 @@ class GUI_TextEditorEx final : public juce::TextEditor
 public:
 	GUI_TextEditorEx (const juce::String& componentName = juce::String (), juce::juce_wchar passwordCharacter = 0);
 
+	enum ColourIds
+	{
+		// Set on an editor: its backgroundColourId while it has the keyboard focus, the resting one back on focus loss
+		focusedBackgroundColourId = 0x1000290,
+	};
+
 	// juce::Component
 	void mouseDoubleClick (const juce::MouseEvent& event) override;
 	void mouseUp (const juce::MouseEvent& event) override;
@@ -60,6 +66,9 @@ private:
 	bool			clickOnlyFocus = true;
 	bool			hasFocus = false;
 	bool			mouseDownInEditor = false;
+
+	// The background before focusGained swapped in focusedBackgroundColourId
+	std::optional<juce::Colour>	restingBackground;
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (GUI_TextEditorEx)
 };

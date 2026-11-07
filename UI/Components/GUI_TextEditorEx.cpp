@@ -95,6 +95,12 @@ void GUI_TextEditorEx::focusGained ( juce::Component::FocusChangeType fct )
 {
 	applyFontToAllText ( getFont () );
 
+	if ( ! restingBackground && isColourSpecified ( focusedBackgroundColourId ) )
+	{
+		restingBackground = findColour ( backgroundColourId );
+		setColour ( backgroundColourId, findColour ( focusedBackgroundColourId ) );
+	}
+
 	juce::TextEditor::focusGained ( fct );
 	hasFocus = true;
 
@@ -115,6 +121,12 @@ void GUI_TextEditorEx::focusLost ( juce::Component::FocusChangeType fct )
 	setHighlightedRegion ( juce::Range<int>::emptyRange ( 0 ) );
 
 	applyFontToAllText ( getFont () );
+
+	if ( restingBackground )
+	{
+		setColour ( backgroundColourId, *restingBackground );
+		restingBackground.reset ();
+	}
 
 	// Is this editor part of a search bar?
 	if ( auto search = getParentComponent (); search && search->getProperties ().getWithDefault ( "type", "" ) == "searchBar" )
