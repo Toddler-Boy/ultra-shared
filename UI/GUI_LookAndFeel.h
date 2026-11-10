@@ -89,6 +89,18 @@ public:
 	// The track starts this far into the bar on its content side while the mouse is away: content that ends this far
 	// short of its pad before the bar reads as padded like its other side
 	static constexpr int	scrollbarTrackInset = 9;
+
+	// The bar's measures: its drawn width, the empty gap on its content side (both make getDefaultScrollbarWidth) and whether
+	// it shows at full width always or only under the mouse. An app's own look-and-feel overrides scrollbarStyle
+	struct ScrollbarStyle
+	{
+		int		barWidth = 16;
+		int		gap = 6;
+		bool	isAlwaysFull = false;
+	};
+
+	[[ nodiscard ]] virtual ScrollbarStyle scrollbarStyle () const	{	return {};	}
+
 	void drawScrollbar ( juce::Graphics&, juce::ScrollBar&, int x, int y, int width, int height, bool isScrollbarVertical, int thumbStartPosition, int thumbSize, bool isMouseOver, bool isMouseDown ) override;
 
 	//

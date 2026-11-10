@@ -556,7 +556,8 @@ void GUI_LookAndFeel::drawButtonText ( juce::Graphics& g, juce::TextButton& butt
 
 int GUI_LookAndFeel::getDefaultScrollbarWidth ()
 {
-	return 16 + 6;
+	const auto	style = scrollbarStyle ();
+	return style.barWidth + style.gap;
 }
 //-------------------------------------------------------------------------------------------------
 
@@ -569,9 +570,9 @@ int GUI_LookAndFeel::getMinimumScrollbarThumbSize ( juce::ScrollBar& sb )
 void GUI_LookAndFeel::drawScrollbar ( juce::Graphics& g, juce::ScrollBar& scrollbar, int x, int y, int width, int height, bool isScrollbarVertical, int thumbStartPosition, int thumbSize, bool isMouseOver, bool isMouseDown )
 {
 	const auto	withThumb = isScrollbarVertical ? ( height != thumbSize ) : ( width != thumbSize );
-	const auto	showFull = ( isMouseOver || isMouseDown ) && withThumb;
-
-	constexpr auto	paddingTopOrLeft = 6;
+	const auto	style = scrollbarStyle ();
+	const auto	showFull = style.isAlwaysFull || ( ( isMouseOver || isMouseDown ) && withThumb );
+	const auto	paddingTopOrLeft = style.gap;
 
 	const auto	reducedBackX = showFull ? 0.0f : float ( scrollbarTrackInset - paddingTopOrLeft );
 	const auto	reducedThumbX = showFull ? 3.0f : 5.5f;
