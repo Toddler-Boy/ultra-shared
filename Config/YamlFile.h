@@ -3,6 +3,7 @@
 #include <JuceHeader.h>
 
 #include <algorithm>
+#include <map>
 #include <variant>
 
 #include "ultra-shared/Helpers/FileUtils.h"
@@ -20,7 +21,7 @@
 // are then just an index lookup plus a compile-time coercion (so e.g.
 // get<float> of an int-declared key still works). Changed values are written
 // back on destruction as a complete, canonical two-level yaml file in table
-// order.
+// order, with the keys the table does not know kept.
 
 class YamlFile
 {
@@ -111,14 +112,33 @@ public:
 	}
 	//-----------------------------------------------------------------------------
 
-	// Writes all known values (defaults table order) as a two-level yaml file
+	// Writes all known values (defaults table order) as a two-level yaml file. Two-level keys the table does not
+	// know (another version's) stay, after the known ones of their section
 	void save ()
 	{
 		if ( readOnly || ! dirty || file == juce::File () || values.empty () )
 			return;
 
+		std::map<juce::String, std::map<juce::String, juce::String>>	unknown;
+
+		for ( const auto& [ path, text ] : result )
+			if ( const auto section = path.upToFirstOccurrenceOf ( "/", false, false ), key = path.fromFirstOccurrenceOf ( "/", false, false );
+				 section.isNotEmpty () && key.isNotEmpty () && ! key.containsChar ( '/' ) && ! std::ranges::contains ( lookup, path ) )
+				unknown[ section ][ key ] = text;
+
 		juce::String	out;
 		juce::String	lastSection;
+
+		const auto	addUnknown = [ & ] ( const juce::String& section )
+		{
+			if ( const auto it = unknown.find ( section ); it != unknown.end () )
+			{
+				for ( const auto& [ key, text ] : it->second )
+					out += line ( key, text );
+
+				unknown.erase ( it );
+			}
+		};
 
 		for ( auto i = 0; i < int ( values.size () ); ++i )
 		{
@@ -127,6 +147,8 @@ public:
 
 			if ( section != lastSection )
 			{
+				addUnknown ( lastSection );
+
 				if ( out.isNotEmpty () )
 					out += "\n";
 
@@ -134,15 +156,17 @@ public:
 				lastSection = section;
 			}
 
-			auto	str = valueToString ( current[ i ] );
+			out += line ( key, valueToString ( current[ i ] ) );
+		}
 
-			// Quote values the parser would otherwise mangle (empty, padded,
-			// quote-bounded, or a lone "|" that the reader takes for a block
-			// scalar; the load-side unquoted () strips the added pair)
-			if ( str.isEmpty () || str != str.trim () || str.startsWithChar ( '"' ) || str.endsWithChar ( '"' ) || str == "|" )
-				str = "\"" + str + "\"";
+		addUnknown ( lastSection );
 
-			out += "  " + key + ": " + str + "\n";
+		for ( const auto& [ section, keys ] : unknown )
+		{
+			out += "\n" + section + ":\n";
+
+			for ( const auto& [ key, text ] : keys )
+				out += line ( key, text );
 		}
 
 		if ( ! fileutils::replaceFile ( file, out ) )
@@ -194,6 +218,27 @@ private:
 			return { parts[ 0 ].getIntValue (), parts[ 1 ].getIntValue () };
 		else
 			return { parts[ 0 ].getFloatValue (), parts[ 1 ].getFloatValue () };
+	}
+	//-----------------------------------------------------------------------------
+
+	// "  key: value"; quoted where the parser would mangle it (empty, padded, quote-bounded, or a lone "|" that the reader takes
+	// for a block scalar; the load-side unquoted () strips the pair), a value of several lines as a block
+	[[ nodiscard ]] static juce::String line ( const juce::String& key, const juce::String& str )
+	{
+		if ( str.containsChar ( '\n' ) )
+		{
+			auto	block = "  " + key + ": |\n";
+
+			for ( const auto& l : juce::StringArray::fromLines ( str.trimCharactersAtEnd ( "\n" ) ) )
+				block += "    " + l + "\n";
+
+			return block;
+		}
+
+		if ( str.isEmpty () || str != str.trim () || str.startsWithChar ( '"' ) || str.endsWithChar ( '"' ) || str == "|" )
+			return "  " + key + ": \"" + str + "\"\n";
+
+		return "  " + key + ": " + str + "\n";
 	}
 	//-----------------------------------------------------------------------------
 

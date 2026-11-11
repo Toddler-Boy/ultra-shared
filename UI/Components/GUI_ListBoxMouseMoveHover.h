@@ -7,7 +7,7 @@
 class GUI_ListBoxMouseMoveHover final : public juce::MouseListener, public juce::ChangeBroadcaster
 {
 public:
-	GUI_ListBoxMouseMoveHover ( juce::TableListBox& lb ) : owner ( lb )
+	GUI_ListBoxMouseMoveHover ( juce::ListBox& lb ) : owner ( lb )
 	{
 		owner.addMouseListener ( this, true );
 	}
@@ -39,7 +39,7 @@ public:
 	}
 
 private:
-	juce::TableListBox& owner;
+	juce::ListBox&		owner;
 	int					hoverPos = -1;
 
 	void updateHoverPos ( const juce::MouseEvent& e )
