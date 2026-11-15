@@ -33,6 +33,8 @@ void GUI_Toggle::enablementChanged ()
 
 void GUI_Toggle::paintButton ( juce::Graphics& g, bool /*isHover*/, bool /*isDown*/ )
 {
+	isPainted = true;
+
 	// Advance both knob edges by the wall time since the flip
 	const auto	target = getToggleState () ? 1.0f : 0.0f;
 	const auto	arrived = juce::approximatelyEqual ( animLead, target ) && juce::approximatelyEqual ( animTail, target );
@@ -93,8 +95,8 @@ void GUI_Toggle::buttonStateChanged ()
 	if ( juce::approximatelyEqual ( newState, animLead ) && juce::approximatelyEqual ( newState, animTail ) )
 		return;
 
-	// Not visible = nothing to animate, snap
-	if ( ! isShowing () )
+	// Not visible or never drawn yet (a new toggle taking its first state) = nothing to animate, snap
+	if ( ! isShowing () || ! isPainted )
 	{
 		animLead = newState;
 		animTail = newState;

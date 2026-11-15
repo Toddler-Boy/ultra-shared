@@ -27,6 +27,7 @@ private:
 	float	leadStart = 0.0f;
 	float	tailStart = 0.0f;
 	double	animStartTime = 0.0;
+	bool	isPainted = false;
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR ( GUI_Toggle )
 };
