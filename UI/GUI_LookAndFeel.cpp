@@ -623,7 +623,7 @@ void GUI_LookAndFeel::drawScrollbar ( juce::Graphics& g, juce::ScrollBar& scroll
 
 juce::TextLayout GUI_LookAndFeel::layoutTooltipText ( const juce::String& text ) noexcept
 {
-	constexpr auto	maxToolTipWidth = 1000.0f;
+	const auto	style = tooltipStyle ();
 
 	juce::AttributedString	s;
 	const auto	font = UI::font ( UI::fonts::tooltip );
@@ -645,7 +645,12 @@ juce::TextLayout GUI_LookAndFeel::layoutTooltipText ( const juce::String& text )
 	}
 
 	juce::TextLayout	tl;
-	tl.createLayoutWithBalancedLineLengths ( s, maxToolTipWidth );
+
+	if ( style.isBalanced )
+		tl.createLayoutWithBalancedLineLengths ( s, style.maxTextWidth );
+	else
+		tl.createLayout ( s, style.maxTextWidth );
+
 	return tl;
 }
 //-------------------------------------------------------------------------------------------------

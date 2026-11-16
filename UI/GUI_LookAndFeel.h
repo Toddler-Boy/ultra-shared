@@ -106,6 +106,16 @@ public:
 	//
 	// Tooltip
 	//
+	// How a tooltip's text wraps: no wider than maxTextWidth, its lines balanced to similar lengths or filled word by word. An app's
+	// own look-and-feel overrides tooltipStyle
+	struct TooltipStyle
+	{
+		float	maxTextWidth = 1000.0f;
+		bool	isBalanced = true;
+	};
+
+	[[ nodiscard ]] virtual TooltipStyle tooltipStyle () const	{	return {};	}
+
 	[[ nodiscard ]] juce::TextLayout layoutTooltipText ( const juce::String& text ) noexcept;
 	juce::Rectangle<int> getTooltipBounds ( const juce::String& tipText, juce::Point<int> screenPos, juce::Rectangle<int> parentArea ) override;
 	void drawTooltip ( juce::Graphics&, const juce::String& text, int width, int height ) override;
