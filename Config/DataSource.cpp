@@ -1,5 +1,7 @@
 #include "ultra-shared/Config/DataSource.h"
 
+#include <atomic>
+
 #include "Config/FilePaths.h"
 #include "ultra-shared/Config/PakFile.h"
 
@@ -207,6 +209,17 @@ namespace
 	}
 	//-----------------------------------------------------------------------------
 
+	std::atomic<bool>	isResolved { false };
+
+	// The folder useFolder chose, only read by the ULTRA_DATA_BESIDE_EXE layout
+	[[ nodiscard, maybe_unused ]] juce::File& chosenFolder ()
+	{
+		static juce::File	folder;
+
+		return folder;
+	}
+	//-----------------------------------------------------------------------------
+
 	[[ nodiscard ]] State resolve ()
 	{
 		#ifdef ULTRA_DATA_DIR
@@ -214,9 +227,16 @@ namespace
 			// so the exe runs from anywhere. Never a pak
 			return fromFolder ( juce::File ( ULTRA_DATA_DIR ) );
 		#elif defined ( ULTRA_DATA_BESIDE_EXE )
-			// Apps that run from a share: one Data folder next to the exe,
-			// both trees merged into it
-			return fromFolder ( juce::File::getSpecialLocation ( juce::File::currentExecutableFile ).getSiblingFile ( "Data" ) );
+			// The naked Data folder the app chose (useFolder), else the pak
+			// appended to the exe, else the Data folder next to the exe
+			{
+				const auto	exe = juce::File::getSpecialLocation ( juce::File::currentExecutableFile );
+
+				if ( chosenFolder () != juce::File () )
+					return fromFolder ( chosenFolder () );
+
+				return PakFile::hasZipTail ( exe ) ? fromPak ( exe ) : fromFolder ( exe.getSiblingFile ( "Data" ) );
+			}
 		#elif JUCE_MAC
 			// Everything ships inside the bundle: files can't go missing without
 			// breaking the code signature, which stops the app from launching at
@@ -253,6 +273,8 @@ namespace
 			installLimeContentLoader ( st.folder );
 		   #endif
 
+			isResolved = true;
+
 			return st;
 		} ();
 
@@ -278,6 +300,19 @@ namespace
 
 		return f;
 	}
+}
+//-----------------------------------------------------------------------------
+
+void datasource::useFolder ( const juce::File& folder )
+{
+   #ifndef ULTRA_DATA_DIR
+	if ( isResolved )
+		Z_ERR ( "The data folder " << folder.getFullPathName () << " came after the first read" );
+	else
+		chosenFolder () = folder;
+   #else
+	juce::ignoreUnused ( folder );
+   #endif
 }
 //-----------------------------------------------------------------------------
 

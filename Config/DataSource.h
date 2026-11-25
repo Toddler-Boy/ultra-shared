@@ -25,6 +25,10 @@ namespace datasource
 	// The pak file or naked folder in use, for the startup log
 	[[ nodiscard ]] juce::String describe ();
 
+	// An app built with ULTRA_DATA_BESIDE_EXE reads the pak appended to its exe, else a naked Data folder: this names the folder, called
+	// before the first read, else the one beside the exe is used. Ignored where the config fixes the folder (ULTRA_DATA_DIR)
+	void useFolder ( const juce::File& folder );
+
 	[[ nodiscard ]] bool exists ( const juce::String& path );
 
 	[[ nodiscard ]] juce::String loadText ( const juce::String& path );
